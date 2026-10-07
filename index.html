@@ -181,7 +181,7 @@
         const globe = new THREE.Mesh(geometry, material);
         scene.add(globe);
 
-        // Arsa Listesi
+        // Arsa Listesi (Tümü "müsait" ve yeşil olarak ayarlandı)
         const pins = [];
         const pinLocations = [
             { 
@@ -198,8 +198,8 @@
                 lat: 41.0082, lon: 28.9784, 
                 title: "İstanbul Boğaz Parseli", 
                 desc: "Kıtaların buluştuğu noktada küresel vitrin.", 
-                status: "dolu", 
-                price: "Kiralanmış",
+                status: "müsait", 
+                price: "75 USD / Ay",
                 image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=500&q=80"
             },
             { 
@@ -216,8 +216,8 @@
                 lat: 40.7128, lon: -74.0060, 
                 title: "New York Times Square", 
                 desc: "Dünyanın finans ve medya merkezinde elit arsa.", 
-                status: "dolu", 
-                price: "Kiralanmış",
+                status: "müsait", 
+                price: "100 USD / Ay",
                 image: "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=500&q=80"
             },
             { 
@@ -226,7 +226,7 @@
                 title: "Londra Merkez Parseli", 
                 desc: "Avrupa'nın finans kalbinde reklam alanı.", 
                 status: "müsait", 
-                price: "60 USD / Ay",
+                price: "80 USD / Ay",
                 image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80"
             },
             { 
@@ -234,8 +234,8 @@
                 lat: 35.6762, lon: 139.6503, 
                 title: "Tokyo Shibuya Parseli", 
                 desc: "Asya'nın yüksek teknolojili reklam bölgesi.", 
-                status: "dolu", 
-                price: "Kiralanmış",
+                status: "müsait", 
+                price: "90 USD / Ay",
                 image: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=500&q=80"
             }
         ];
@@ -250,8 +250,8 @@
         }
 
         pinLocations.forEach(loc => {
-            // Tıklama kolaylığı için pinleri (küreleri) biraz daha büyük yapıyoruz (yarıçap: 4.5)
             const pinGeo = new THREE.SphereGeometry(4.5, 16, 16);
+            // Durumuna göre renk (Hepsi müsait olduğu için başlangıçta yeşil olacak)
             const colorHex = loc.status === "müsait" ? 0x22c55e : 0xef4444;
             const pinMat = new THREE.MeshBasicMaterial({ color: colorHex });
             const pinMesh = new THREE.Mesh(pinGeo, pinMat);
@@ -267,7 +267,6 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // Tıklama algılayıcısını pointerup (tıklama bittiğinde) olarak güncelleyip hassasiyeti artırdık
         window.addEventListener('pointerup', (e) => {
             if (e.target.closest('#info-card') || e.target.closest('#action-modal')) return;
 
@@ -349,7 +348,7 @@
 
             const targetPin = pins.find(p => p.userData.id === selectedParcel.id);
             if (targetPin) {
-                targetPin.material.color.setHex(0xef4444);
+                targetPin.material.color.setHex(0xef4444); // Kiralandığı için kırmızıya döner
             }
 
             alert("Tebrikler! Reklamınız başarıyla oluşturuldu ve arsa canlı olarak güncellendi.");
