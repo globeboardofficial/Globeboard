@@ -3,39 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlobeBoard - Küresel Reklam Platformu</title>
+    <title>GlobeBoard - Küresel Sanal Arsa Platformu</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #050811; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; }
         #info-card {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.9);
+            background: rgba(15, 23, 42, 0.92);
             color: #fff;
-            padding: 15px 20px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
             text-align: center;
             max-width: 90%;
-            width: 320px;
+            width: 340px;
             display: none;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(12px);
         }
-        #info-card h3 { margin: 0 0 8px 0; color: #38bdf8; font-size: 1.1rem; }
-        #info-card p { margin: 0 0 12px 0; font-size: 0.9rem; color: #cbd5e1; }
+        #info-card h3 { margin: 0 0 6px 0; color: #38bdf8; font-size: 1.2rem; }
+        #info-card .status { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; }
+        #info-card .status.available { background: #166534; color: #4ade80; }
+        #info-card .status.taken { background: #991b1b; color: #fca5a5; }
+        #info-card p { margin: 0 0 14px 0; font-size: 0.9rem; color: #cbd5e1; line-height: 1.4; }
         #info-card button {
-            background: #2563eb;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
+            padding: 10px 18px;
+            border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
             width: 100%;
+            transition: transform 0.2s;
         }
+        #info-card button:active { transform: scale(0.98); }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -43,16 +48,17 @@
 <body>
     <div id="canvas-container"></div>
     <div id="info-card">
-        <h3 id="card-title">Sanal Arsa #1</h3>
-        <p id="card-desc">Bu alan henüz kiralanmadı. Markanızı dünyaya tanıtmak için hemen yerinizi alın!</p>
-        <button onclick="alert('Kirala/Satın Al mekanizması yakında aktif olacak!')">Arsayı İncele / Kirala</button>
+        <h3 id="card-title">Sanal Arsa</h3>
+        <div id="card-status" class="status available">Müsait</div>
+        <p id="card-desc">Arsa detayları burada görünecektir.</p>
+        <button id="card-btn" onclick="contactParcel()">Bu Arsayı İncele / Kirala</button>
     </div>
 
     <script>
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 250;
+        camera.position.z = 240;
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -64,10 +70,10 @@
         controls.dampingFactor = 0.05;
         controls.rotateSpeed = 0.8;
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
         dirLight.position.set(5, 3, 5);
         scene.add(dirLight);
 
@@ -79,12 +85,15 @@
         const globe = new THREE.Mesh(geometry, material);
         scene.add(globe);
 
-        // Örnek Reklam / Arsa Noktaları (Pimler)
+        // Genişletilmiş Arsa Listesi (Yeşil = Müsait, Kırmızı = Dolu)
         const pins = [];
         const pinLocations = [
-            { lat: 41.0082, lon: 28.9784, title: "İstanbul Parseli", desc: "Türkiye'nin kalbinde yer alan prestijli reklam alanı." },
-            { lat: 40.7128, lon: -74.0060, title: "New York Parseli", desc: "Küresel finans merkezinde reklamınızı yayınlayın." },
-            { lat: 35.6762, lon: 139.6503, title: "Tokyo Parseli", desc: "Teknoloji devlerinin merkezinde sanal arsa." }
+            { lat: 38.4237, lon: 27.1428, title: "İzmir Kordon Parseli", desc: "Ege'nin incisinde yüksek görünürlüklü sanal reklam alanı.", status: "müsait", price: "50 USD / Ay" },
+            { lat: 41.0082, lon: 28.9784, title: "İstanbul Boğaz Parseli", desc: "Kıtaların buluştuğu noktada küresel vitrin.", status: "dolu", price: "Kiralanmış" },
+            { lat: 39.9334, lon: 32.8597, title: "Ankara Başkent Parseli", desc: "Merkezi reklam ve marka tanıtım noktası.", status: "müsait", price: "40 USD / Ay" },
+            { lat: 40.7128, lon: -74.0060, title: "New York Times Square", desc: "Dünyanın finans ve medya merkezinde elit arsa.", status: "dolu", price: "Kiralanmış" },
+            { lat: 51.5074, lon: -0.1278, title: "Londra Merkez Parseli", desc: "Avrupa'nın finans kalbinde reklam alanı.", status: "müsait", price: "60 USD / Ay" },
+            { lat: 35.6762, lon: 139.6503, title: "Tokyo Shibuya Parseli", desc: "Asya'nın yüksek teknolojili reklam bölgesi.", status: "dolu", price: "Kiralanmış" }
         ];
 
         function latLonToVector3(lat, lon, radius) {
@@ -97,11 +106,13 @@
         }
 
         pinLocations.forEach(loc => {
-            const pinGeo = new THREE.SphereGeometry(2.5, 16, 16);
-            const pinMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+            const pinGeo = new THREE.SphereGeometry(2.2, 16, 16);
+            // Müsaitse Yeşil (0x22c55e), Doluysa Kırmızı (0xef4444)
+            const colorHex = loc.status === "müsait" ? 0x22c55e : 0xef4444;
+            const pinMat = new THREE.MeshBasicMaterial({ color: colorHex });
             const pinMesh = new THREE.Mesh(pinGeo, pinMat);
             
-            const pos = latLonToVector3(loc.lat, loc.lon, 81);
+            const pos = latLonToVector3(loc.lat, loc.lon, 81.2);
             pinMesh.position.copy(pos);
             pinMesh.userData = loc;
             
@@ -109,7 +120,6 @@
             pins.push(pinMesh);
         });
 
-        // Tıklama Algılama
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -123,14 +133,30 @@
             if (intersects.length > 0) {
                 const data = intersects[0].object.userData;
                 document.getElementById('card-title').innerText = data.title;
-                document.getElementById('card-desc').innerText = data.desc;
+                document.getElementById('card-desc').innerText = data.desc + " (Fiyat: " + data.price + ")";
+                
+                const statusEl = document.getElementById('card-status');
+                if(data.status === "müsait") {
+                    statusEl.innerText = "MÜSAİT - " + data.price;
+                    statusEl.className = "status available";
+                    document.getElementById('card-btn').innerText = "Bu Arsayı Kirala";
+                } else {
+                    statusEl.innerText = "KİRALANDI";
+                    statusEl.className = "status taken";
+                    document.getElementById('card-btn').innerText = "Detayları Gör";
+                }
+
                 document.getElementById('info-card').style.display = 'block';
             }
         });
 
+        function contactParcel() {
+            alert('Tebrikler! Bu arsayı kiralamak için rezervasyon talebiniz iletildi.');
+        }
+
         function animate() {
             requestAnimationFrame(animate);
-            globe.rotation.y += 0.001;
+            globe.rotation.y += 0.0008;
             controls.update();
             renderer.render(scene, camera);
         }
