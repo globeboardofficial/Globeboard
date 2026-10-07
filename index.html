@@ -8,25 +8,6 @@
         body { margin: 0; overflow: hidden; background-color: #050811; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; position: relative; }
         
-        /* Etiketler tamamen tıklama dışı bırakıldı ve noktaların tam üzerinde konumlandırıldı */
-        .pin-label {
-            position: absolute;
-            transform: translate(-50%, -150%);
-            background: rgba(15, 23, 42, 0.9);
-            color: #38bdf8;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            border: 1px solid rgba(56, 189, 248, 0.4);
-            pointer-events: none !important;
-            user-select: none;
-            white-space: nowrap;
-            backdrop-filter: blur(4px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-            z-index: 5;
-        }
-
         /* Bilgi Kartı */
         #info-card {
             position: absolute;
@@ -200,47 +181,23 @@
         const globe = new THREE.Mesh(geometry, material);
         scene.add(globe);
 
-        // Kapsamlı Ülke ve Şehir Veritabanı
+        // Şehir Veritabanı
         const pins = [];
-        const labelElements = [];
         const pinLocations = [
-            // Türkiye
-            { id: 1, lat: 41.0082, lon: 28.9784, title: "İstanbul Boğaz Parseli", cityName: "İstanbul, Türkiye", desc: "Kıtaların buluştuğu küresel ticaret merkezi.", status: "müsait", price: "75 USD / Ay", image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=500&q=80" },
-            { id: 2, lat: 39.9334, lon: 32.8597, title: "Ankara Merkez Parseli", cityName: "Ankara, Türkiye", desc: "Türkiye'nin siyasi ve idari kalbi.", status: "müsait", price: "40 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
-            { id: 3, lat: 38.4237, lon: 27.1428, title: "İzmir Kordon Parseli", cityName: "İzmir, Türkiye", desc: "Ege'nin incisi ticaret bölgesi.", status: "müsait", price: "50 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
-            { id: 4, lat: 36.8969, lon: 30.7133, title: "Antalya Sahil Parseli", cityName: "Antalya, Türkiye", desc: "Akdeniz'in turizm başkenti.", status: "müsait", price: "45 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
-            { id: 5, lat: 40.1828, lon: 29.0665, title: "Bursa Sanayi Parseli", cityName: "Bursa, Türkiye", desc: "Otomotiv ve sanayi merkezi.", status: "müsait", price: "35 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
-            { id: 6, lat: 37.0662, lon: 37.3833, title: "Gaziantep Ticaret Parseli", cityName: "Gaziantep, Türkiye", desc: "Güneydoğu'nun sanayi merkezi.", status: "müsait", price: "30 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
-            { id: 7, lat: 40.9833, lon: 39.7276, title: "Trabzon Liman Parseli", cityName: "Trabzon, Türkiye", desc: "Karadeniz'in ticaret kapısı.", status: "müsait", price: "30 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
-            
-            // Avrupa
-            { id: 8, lat: 51.5074, lon: -0.1278, title: "Londra Finans Merkezi", cityName: "Londra, İngiltere", desc: "Avrupa'nın finans ve borsa kalbi.", status: "müsait", price: "90 USD / Ay", image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&q=80" },
-            { id: 9, lat: 48.8566, lon: 2.3522, title: "Paris Moda Parseli", cityName: "Paris, Fransa", desc: "Moda ve sanat merkezi.", status: "müsait", price: "85 USD / Ay", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&q=80" },
-            { id: 10, lat: 52.5200, lon: 13.4050, title: "Berlin Teknoloji Parseli", cityName: "Berlin, Almanya", desc: "Avrupa'nın teknoloji üssü.", status: "müsait", price: "75 USD / Ay", image: "https://images.unsplash.com/photo-1560969184-10fe8719e047?w=500&q=80" },
-            { id: 11, lat: 41.9028, lon: 12.4964, title: "Roma Tarih Parseli", cityName: "Roma, İtalya", desc: "Tarih ve turizm odaklı küresel nokta.", status: "müsait", price: "65 USD / Ay", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=500&q=80" },
-            { id: 12, lat: 40.4168, lon: -3.7038, title: "Madrid Ticaret Parseli", cityName: "Madrid, İspanya", desc: "İspanya'nın ana iş merkezi.", status: "müsait", price: "60 USD / Ay", image: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=500&q=80" },
-            { id: 13, lat: 55.7558, lon: 37.6173, title: "Moskova Ticaret Parseli", cityName: "Moskova, Rusya", desc: "Avrasya'nın ticaret ve finans merkezi.", status: "müsait", price: "70 USD / Ay", image: "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=500&q=80" },
-
-            // Amerika
-            { id: 14, lat: 40.7128, lon: -74.0060, title: "New York Times Square", cityName: "New York, ABD", desc: "Dünyanın reklam ve finans merkezi.", status: "müsait", price: "120 USD / Ay", image: "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=500&q=80" },
-            { id: 15, lat: 34.0522, lon: -118.2437, title: "Los Angeles Medya Parseli", cityName: "Los Angeles, ABD", desc: "Eğlence ve sinema sektörü kalbi.", status: "müsait", price: "95 USD / Ay", image: "https://images.unsplash.com/photo-1580655653885-65763b2597d0?w=500&q=80" },
-            { id: 16, lat: 37.7749, lon: -122.4194, title: "San Francisco Silikon Vadisi", cityName: "San Francisco, ABD", desc: "Küresel teknoloji ve yazılım merkezi.", status: "müsait", price: "110 USD / Ay", image: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=500&q=80" },
-            { id: 17, lat: 43.6532, lon: -79.3832, title: "Toronto Finans Parseli", cityName: "Toronto, Kanada", desc: "Kanada'nın ekonomik kalbi.", status: "müsait", price: "70 USD / Ay", image: "https://images.unsplash.com/photo-1517090504586-fde19ea6066f?w=500&q=80" },
-            { id: 18, lat: -23.5505, lon: -46.6333, title: "Sao Paulo İş Merkezi", cityName: "Sao Paulo, Brezilya", desc: "Güney Amerika'nın ticaret devi.", status: "müsait", price: "55 USD / Ay", image: "https://images.unsplash.com/photo-1543059080-f9b12722bc9d?w=500&q=80" },
-            { id: 19, lat: 19.4326, lon: -99.1332, title: "Mexico City Parseli", cityName: "Meksika Şehri, Meksika", desc: "Latin Amerika'nın kültür ve finans üssü.", status: "müsait", price: "50 USD / Ay", image: "https://images.unsplash.com/photo-1512813389646-ac644634d4f8?w=500&q=80" },
-
-            // Asya ve Orta Doğu
-            { id: 20, lat: 35.6762, lon: 139.6503, title: "Tokyo Shibuya Parseli", cityName: "Tokyo, Japonya", desc: "Asya'nın yüksek teknoloji bölgesi.", status: "müsait", price: "100 USD / Ay", image: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=500&q=80" },
-            { id: 21, lat: 31.2304, lon: 121.4737, title: "Şanghay Liman Parseli", cityName: "Şanghay, Çin", desc: "Küresel ticaret limanı.", status: "müsait", price: "90 USD / Ay", image: "https://images.unsplash.com/photo-1548919973-57551525e18c?w=500&q=80" },
-            { id: 22, lat: 39.9042, lon: 116.4074, title: "Pekin Başkent Parseli", cityName: "Pekin, Çin", desc: "Asya'nın politik ve ekonomik merkezi.", status: "müsait", price: "85 USD / Ay", image: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=500&q=80" },
-            { id: 23, lat: 25.2048, lon: 55.2708, title: "Dubai Marina Parseli", cityName: "Dubai, BAE", desc: "Orta Doğu'nun lüks ve ticaret vitrini.", status: "müsait", price: "95 USD / Ay", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=500&q=80" },
-            { id: 24, lat: 28.6139, lon: 77.2090, title: "Yeni Delhi Ticaret Parseli", cityName: "Yeni Delhi, Hindistan", desc: "Güney Asya'nın pazar merkezi.", status: "müsait", price: "60 USD / Ay", image: "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&q=80" },
-            { id: 25, lat: 1.3521, lon: 103.8198, title: "Singapur Finans Üssü", cityName: "Singapur", desc: "Güneydoğu Asya'nın teknoloji üssü.", status: "müsait", price: "85 USD / Ay", image: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=500&q=80" },
-
-            // Afrika ve Okyanusya
-            { id: 26, lat: -33.8688, lon: 151.2093, title: "Sidney Liman Parseli", cityName: "Sidney, Avustralya", desc: "Okyanusya'nın yaşam ve ticaret merkezi.", status: "müsait", price: "70 USD / Ay", image: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=500&q=80" },
-            { id: 27, lat: 30.0444, lon: 31.2357, title: "Kahire Nil Parseli", cityName: "Kahire, Mısır", desc: "Kuzey Afrika'nın kültürel kavşağı.", status: "müsait", price: "40 USD / Ay", image: "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=500&q=80" },
-            { id: 28, lat: -26.2041, lon: 28.0473, title: "Johannesburg Parseli", cityName: "Johannesburg, Güney Afrika", desc: "Afrika'nın ekonomik başkenti.", status: "müsait", price: "45 USD / Ay", image: "https://images.unsplash.com/photo-1577948000119-2797b7b26102?w=500&q=80" }
+            { id: 1, lat: 41.0082, lon: 28.9784, title: "İstanbul Boğaz Parseli", cityName: "İstanbul, TR", desc: "Kıtaların buluştuğu küresel ticaret merkezi.", status: "müsait", price: "75 USD / Ay", image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=500&q=80" },
+            { id: 2, lat: 39.9334, lon: 32.8597, title: "Ankara Merkez Parseli", cityName: "Ankara, TR", desc: "Türkiye'nin siyasi ve idari kalbi.", status: "müsait", price: "40 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
+            { id: 3, lat: 38.4237, lon: 27.1428, title: "İzmir Kordon Parseli", cityName: "İzmir, TR", desc: "Ege'nin incisi ticaret bölgesi.", status: "müsait", price: "50 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
+            { id: 4, lat: 36.8969, lon: 30.7133, title: "Antalya Sahil Parseli", cityName: "Antalya, TR", desc: "Akdeniz'in turizm başkenti.", status: "müsait", price: "45 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
+            { id: 5, lat: 51.5074, lon: -0.1278, title: "Londra Finans Merkezi", cityName: "Londra, UK", desc: "Avrupa'nın finans ve borsa kalbi.", status: "müsait", price: "90 USD / Ay", image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&q=80" },
+            { id: 6, lat: 48.8566, lon: 2.3522, title: "Paris Moda Parseli", cityName: "Paris, FR", desc: "Moda ve sanat merkezi.", status: "müsait", price: "85 USD / Ay", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&q=80" },
+            { id: 7, lat: 52.5200, lon: 13.4050, title: "Berlin Teknoloji Parseli", cityName: "Berlin, DE", desc: "Avrupa'nın teknoloji üssü.", status: "müsait", price: "75 USD / Ay", image: "https://images.unsplash.com/photo-1560969184-10fe8719e047?w=500&q=80" },
+            { id: 8, lat: 41.9028, lon: 12.4964, title: "Roma Tarih Parseli", cityName: "Roma, IT", desc: "Tarih ve turizm odaklı küresel nokta.", status: "müsait", price: "65 USD / Ay", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=500&q=80" },
+            { id: 9, lat: 40.7128, lon: -74.0060, title: "New York Times Square", cityName: "New York, US", desc: "Dünyanın reklam ve finans merkezi.", status: "müsait", price: "120 USD / Ay", image: "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=500&q=80" },
+            { id: 10, lat: 34.0522, lon: -118.2437, title: "Los Angeles Medya Parseli", cityName: "Los Angeles, US", desc: "Eğlence ve sinema sektörü kalbi.", status: "müsait", price: "95 USD / Ay", image: "https://images.unsplash.com/photo-1580655653885-65763b2597d0?w=500&q=80" },
+            { id: 11, lat: 35.6762, lon: 139.6503, title: "Tokyo Shibuya Parseli", cityName: "Tokyo, JP", desc: "Asya'nın yüksek teknoloji bölgesi.", status: "müsait", price: "100 USD / Ay", image: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=500&q=80" },
+            { id: 12, lat: 25.2048, lon: 55.2708, title: "Dubai Marina Parseli", cityName: "Dubai, UAE", desc: "Orta Doğu'nun lüks ve ticaret vitrini.", status: "müsait", price: "95 USD / Ay", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=500&q=80" },
+            { id: 13, lat: -33.8688, lon: 151.2093, title: "Sidney Liman Parseli", cityName: "Sidney, AU", desc: "Okyanusya'nın yaşam ve ticaret merkezi.", status: "müsait", price: "70 USD / Ay", image: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=500&q=80" },
+            { id: 14, lat: 30.0444, lon: 31.2357, title: "Kahire Nil Parseli", cityName: "Kahire, EG", desc: "Kuzey Afrika'nın kültürel kavşağı.", status: "müsait", price: "40 USD / Ay", image: "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=500&q=80" }
         ];
 
         function latLonToVector3(lat, lon, radius) {
@@ -252,34 +209,64 @@
             return new THREE.Vector3(x, y, z);
         }
 
+        // Canvas üzerine yazı çizen yardımcı fonksiyon (Etiket kaymalarını tamamen önler)
+        function createTextSprite(message) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            context.font = 'Bold 24px Arial';
+            const metrics = context.measureText(message);
+            canvas.width = metrics.width + 20;
+            canvas.height = 40;
+
+            context.font = 'Bold 24px Arial';
+            context.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            context.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+            context.lineWidth = 3;
+
+            // Yuvarlatılmış arkaplan kutusu
+            context.beginPath();
+            context.roundRect(0, 0, canvas.width, canvas.height, 8);
+            context.fill();
+            context.stroke();
+
+            context.fillStyle = '#38bdf8';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(message, canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(12, 6, 1);
+            return sprite;
+        }
+
         pinLocations.forEach(loc => {
-            // Tıklama hassasiyeti için küre boyutu artırıldı ve raycaster optimizasyonu sağlandı
-            const pinGeo = new THREE.SphereGeometry(6.0, 24, 24);
+            // Nokta boyutu küçültüldü ve netleştirildi
+            const pinGeo = new THREE.SphereGeometry(1.6, 16, 16);
             const colorHex = loc.status === "müsait" ? 0x22c55e : 0xef4444;
             const pinMat = new THREE.MeshBasicMaterial({ color: colorHex });
             const pinMesh = new THREE.Mesh(pinGeo, pinMat);
             
-            const pos = latLonToVector3(loc.lat, loc.lon, 81.5);
+            const pos = latLonToVector3(loc.lat, loc.lon, 80.8);
             pinMesh.position.copy(pos);
             pinMesh.userData = loc;
             
             scene.add(pinMesh);
             pins.push(pinMesh);
 
-            const labelDiv = document.createElement('div');
-            labelDiv.className = 'pin-label';
-            labelDiv.innerText = loc.cityName;
-            container.appendChild(labelDiv);
-
-            labelElements.push({ element: labelDiv, position: pos });
+            // Yazı etiketi doğrudan 3D nesne olarak tam noktanın üzerine sabitlendi
+            const labelSprite = createTextSprite(loc.cityName);
+            const labelPos = latLonToVector3(loc.lat, loc.lon, 84.5); // Noktanın hemen üzerinde
+            labelSprite.position.copy(labelPos);
+            scene.add(labelSprite);
         });
 
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // Noktalara basıldığında doğrudan çalışması için güncellenmiş tıklama mantığı
+        // Tıklama Algılama
         window.addEventListener('pointerdown', (e) => {
-            // Eğer kartın içine veya modal paneline tıklandıysa işlemi yoksay
             if (e.target.closest('#info-card') || e.target.closest('#action-modal')) return;
 
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -315,7 +302,7 @@
 
                 document.getElementById('info-card').style.display = 'block';
             } else {
-                // Boş bir alana (dünyaya veya uzaya) tıklandığında bilgi kartını kapat
+                // Boş bir yere tıklandığında bilgi kartını kapat
                 document.getElementById('info-card').style.display = 'none';
             }
         });
@@ -370,34 +357,10 @@
             closeActionModal();
         }
 
-        function updateLabels() {
-            const tempVector = new THREE.Vector3();
-            const cameraDir = camera.getWorldDirection(new THREE.Vector3());
-
-            labelElements.forEach(item => {
-                tempVector.copy(item.position);
-                
-                const vectorToPin = item.position.clone().normalize();
-                const dot = vectorToPin.dot(cameraDir.clone().negate());
-
-                if (dot < -0.05) {
-                    item.element.style.display = 'none';
-                } else {
-                    item.element.style.display = 'block';
-                    tempVector.project(camera);
-                    const x = (tempVector.x * 0.5 + 0.5) * window.innerWidth;
-                    const y = (tempVector.y * -0.5 + 0.5) * window.innerHeight;
-                    item.element.style.left = `${x}px`;
-                    item.element.style.top = `${y}px`;
-                }
-            });
-        }
-
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
             renderer.render(scene, camera);
-            updateLabels();
         }
         animate();
 
