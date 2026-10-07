@@ -6,8 +6,26 @@
     <title>GlobeBoard - Küresel Sanal Arsa Platformu</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #050811; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #canvas-container { width: 100vw; height: 100vh; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
         
+        /* 3D Küre Üzerindeki İsim Etiketleri */
+        .pin-label {
+            position: absolute;
+            transform: translate(-50%, -120%);
+            background: rgba(15, 23, 42, 0.85);
+            color: #38bdf8;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            pointer-events: none;
+            white-space: nowrap;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: opacity 0.2s;
+        }
+
         /* Bilgi Kartı */
         #info-card {
             position: absolute;
@@ -181,13 +199,15 @@
         const globe = new THREE.Mesh(geometry, material);
         scene.add(globe);
 
-        // Arsa Listesi (Tümü "müsait" ve yeşil olarak ayarlandı)
+        // Arsa Listesi ve Bölge İsimleri
         const pins = [];
+        const labelElements = [];
         const pinLocations = [
             { 
                 id: 1,
                 lat: 38.4237, lon: 27.1428, 
                 title: "İzmir Kordon Parseli", 
+                cityName: "İzmir, Türkiye",
                 desc: "Ege'nin incisinde yüksek görünürlüklü reklam alanı.", 
                 status: "müsait", 
                 price: "50 USD / Ay",
@@ -197,6 +217,7 @@
                 id: 2,
                 lat: 41.0082, lon: 28.9784, 
                 title: "İstanbul Boğaz Parseli", 
+                cityName: "İstanbul, Türkiye",
                 desc: "Kıtaların buluştuğu noktada küresel vitrin.", 
                 status: "müsait", 
                 price: "75 USD / Ay",
@@ -206,6 +227,7 @@
                 id: 3,
                 lat: 39.9334, lon: 32.8597, 
                 title: "Ankara Başkent Parseli", 
+                cityName: "Ankara, Türkiye",
                 desc: "Merkezi reklam ve marka tanıtım noktası.", 
                 status: "müsait", 
                 price: "40 USD / Ay",
@@ -215,6 +237,7 @@
                 id: 4,
                 lat: 40.7128, lon: -74.0060, 
                 title: "New York Times Square", 
+                cityName: "New York, ABD",
                 desc: "Dünyanın finans ve medya merkezinde elit arsa.", 
                 status: "müsait", 
                 price: "100 USD / Ay",
@@ -224,6 +247,7 @@
                 id: 5,
                 lat: 51.5074, lon: -0.1278, 
                 title: "Londra Merkez Parseli", 
+                cityName: "Londra, İngiltere",
                 desc: "Avrupa'nın finans kalbinde reklam alanı.", 
                 status: "müsait", 
                 price: "80 USD / Ay",
@@ -233,6 +257,7 @@
                 id: 6,
                 lat: 35.6762, lon: 139.6503, 
                 title: "Tokyo Shibuya Parseli", 
+                cityName: "Tokyo, Japonya",
                 desc: "Asya'nın yüksek teknolojili reklam bölgesi.", 
                 status: "müsait", 
                 price: "90 USD / Ay",
@@ -251,7 +276,6 @@
 
         pinLocations.forEach(loc => {
             const pinGeo = new THREE.SphereGeometry(4.5, 16, 16);
-            // Durumuna göre renk (Hepsi müsait olduğu için başlangıçta yeşil olacak)
             const colorHex = loc.status === "müsait" ? 0x22c55e : 0xef4444;
             const pinMat = new THREE.MeshBasicMaterial({ color: colorHex });
             const pinMesh = new THREE.Mesh(pinGeo, pinMat);
@@ -262,6 +286,14 @@
             
             scene.add(pinMesh);
             pins.push(pinMesh);
+
+            // HTML İsim Etiketi Oluşturma
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'pin-label';
+            labelDiv.innerText = loc.cityName;
+            container.appendChild(labelDiv);
+
+            labelElements.push({ element: labelDiv, position: pos, mesh: pinMesh });
         });
 
         const raycaster = new THREE.Raycaster();
@@ -348,17 +380,43 @@
 
             const targetPin = pins.find(p => p.userData.id === selectedParcel.id);
             if (targetPin) {
-                targetPin.material.color.setHex(0xef4444); // Kiralandığı için kırmızıya döner
+                targetPin.material.color.setHex(0xef4444);
             }
 
             alert("Tebrikler! Reklamınız başarıyla oluşturuldu ve arsa canlı olarak güncellendi.");
             closeActionModal();
         }
 
+        function updateLabels() {
+            const tempVector = new THREE.Vector3();
+            const cameraDir = new THREE.Vector3();
+            camera.getWorldDirection(cameraDir);
+
+            labelElements.forEach(item => {
+                tempVector.copy(item.position);
+                tempVector.project(camera);
+
+                // Nokta kameranın arkasında kaldıysa etiketi gizle
+                const vectorToPin = item.position.clone().normalize();
+                const dot = vectorToPin.dot(camera.getWorldDirection(new THREE.Vector3()).negate());
+
+                if (dot < -0.1) {
+                    item.element.style.display = 'none';
+                } else {
+                    item.element.style.display = 'block';
+                    const x = (tempVector.x *  .5 + .5) * window.innerWidth;
+                    const y = (tempVector.y * -.5 + .5) * window.innerHeight;
+                    item.element.style.left = `${x}px`;
+                    item.element.style.top = `${y}px`;
+                }
+            });
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
             renderer.render(scene, camera);
+            updateLabels();
         }
         animate();
 
