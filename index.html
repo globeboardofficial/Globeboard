@@ -331,14 +331,12 @@
             e.preventDefault();
             const title = document.getElementById('adTitle').value;
 
-            // Seçilen arsayı anında dolu yapıp yeni görseli atama
             if (uploadedImageUrl) {
                 selectedParcel.image = uploadedImageUrl;
             }
             selectedParcel.title = title;
             selectedParcel.status = "dolu";
 
-            // Kartı güncelle
             document.getElementById('card-title').innerText = selectedParcel.title;
             document.getElementById('card-image').src = selectedParcel.image;
             document.getElementById('card-status').innerText = "KİRALANDI";
@@ -347,7 +345,6 @@
             document.getElementById('card-btn').disabled = true;
             document.getElementById('card-btn').style.opacity = "0.5";
 
-            // Pin rengini kırmızı yap
             const targetPin = pins.find(p => p.userData.id === selectedParcel.id);
             if (targetPin) {
                 targetPin.material.color.setHex(0xef4444);
@@ -359,7 +356,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            globe.rotation.y += 0.0008;
+            // Küre artık dönmüyor, sadece kontroller çalışıyor
             controls.update();
             renderer.render(scene, camera);
         }
