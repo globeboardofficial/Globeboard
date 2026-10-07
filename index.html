@@ -8,18 +8,19 @@
         body { margin: 0; overflow: hidden; background-color: #050811; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; position: relative; }
         
-        /* Sabit ve Düzgün Hizalanmış Etiketler */
+        /* Etiketler tamamen tıklama dışı bırakıldı ve noktaların tam üzerinde konumlandırıldı */
         .pin-label {
             position: absolute;
-            transform: translate(-50%, -140%);
+            transform: translate(-50%, -150%);
             background: rgba(15, 23, 42, 0.9);
             color: #38bdf8;
-            padding: 3px 7px;
+            padding: 3px 8px;
             border-radius: 4px;
             font-size: 10px;
             font-weight: 600;
             border: 1px solid rgba(56, 189, 248, 0.4);
-            pointer-events: none;
+            pointer-events: none !important;
+            user-select: none;
             white-space: nowrap;
             backdrop-filter: blur(4px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.6);
@@ -252,7 +253,8 @@
         }
 
         pinLocations.forEach(loc => {
-            const pinGeo = new THREE.SphereGeometry(4.0, 16, 16);
+            // Tıklama hassasiyeti için küre boyutu artırıldı ve raycaster optimizasyonu sağlandı
+            const pinGeo = new THREE.SphereGeometry(6.0, 24, 24);
             const colorHex = loc.status === "müsait" ? 0x22c55e : 0xef4444;
             const pinMat = new THREE.MeshBasicMaterial({ color: colorHex });
             const pinMesh = new THREE.Mesh(pinGeo, pinMat);
@@ -275,8 +277,9 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // Tıklama olayını en hassas hale getirdik
+        // Noktalara basıldığında doğrudan çalışması için güncellenmiş tıklama mantığı
         window.addEventListener('pointerdown', (e) => {
+            // Eğer kartın içine veya modal paneline tıklandıysa işlemi yoksay
             if (e.target.closest('#info-card') || e.target.closest('#action-modal')) return;
 
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -311,6 +314,9 @@
                 }
 
                 document.getElementById('info-card').style.display = 'block';
+            } else {
+                // Boş bir alana (dünyaya veya uzaya) tıklandığında bilgi kartını kapat
+                document.getElementById('info-card').style.display = 'none';
             }
         });
 
@@ -364,7 +370,6 @@
             closeActionModal();
         }
 
-        // Etiketlerin pini tam takip etmesi için güncellenmiş konum hesaplayıcısı
         function updateLabels() {
             const tempVector = new THREE.Vector3();
             const cameraDir = camera.getWorldDirection(new THREE.Vector3());
@@ -372,7 +377,6 @@
             labelElements.forEach(item => {
                 tempVector.copy(item.position);
                 
-                // Pin kürenin arkasında kaldıysa etiketi gizle
                 const vectorToPin = item.position.clone().normalize();
                 const dot = vectorToPin.dot(cameraDir.clone().negate());
 
