@@ -250,12 +250,13 @@
         }
 
         pinLocations.forEach(loc => {
-            const pinGeo = new THREE.SphereGeometry(2.2, 16, 16);
+            // Tıklama kolaylığı için pinleri (küreleri) biraz daha büyük yapıyoruz (yarıçap: 4.5)
+            const pinGeo = new THREE.SphereGeometry(4.5, 16, 16);
             const colorHex = loc.status === "müsait" ? 0x22c55e : 0xef4444;
             const pinMat = new THREE.MeshBasicMaterial({ color: colorHex });
             const pinMesh = new THREE.Mesh(pinGeo, pinMat);
             
-            const pos = latLonToVector3(loc.lat, loc.lon, 81.2);
+            const pos = latLonToVector3(loc.lat, loc.lon, 81.5);
             pinMesh.position.copy(pos);
             pinMesh.userData = loc;
             
@@ -266,7 +267,8 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        window.addEventListener('click', (e) => {
+        // Tıklama algılayıcısını pointerup (tıklama bittiğinde) olarak güncelleyip hassasiyeti artırdık
+        window.addEventListener('pointerup', (e) => {
             if (e.target.closest('#info-card') || e.target.closest('#action-modal')) return;
 
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -356,7 +358,6 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            // Küre artık dönmüyor, sadece kontroller çalışıyor
             controls.update();
             renderer.render(scene, camera);
         }
