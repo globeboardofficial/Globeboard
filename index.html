@@ -7,6 +7,8 @@
     <style>
         body { margin: 0; overflow: hidden; background-color: #050811; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* Bilgi Kartı */
         #info-card {
             position: absolute;
             bottom: 25px;
@@ -23,6 +25,7 @@
             width: 320px;
             display: none;
             backdrop-filter: blur(12px);
+            z-index: 10;
         }
         #card-image {
             width: 100%;
@@ -38,7 +41,7 @@
         #info-card .status.taken { background: #991b1b; color: #fca5a5; }
         #info-card p { margin: 0 0 12px 0; font-size: 0.85rem; color: #cbd5e1; line-height: 1.3; }
         #info-card button {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            background: linear-gradient(135deg, #10b981, #059669);
             color: white;
             border: none;
             padding: 10px 16px;
@@ -49,21 +52,105 @@
             transition: transform 0.2s;
         }
         #info-card button:active { transform: scale(0.98); }
+
+        /* Doğrudan İşlem Modal / Panel */
+        #action-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #0f172a;
+            border: 1px solid #38bdf8;
+            padding: 24px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+            color: #fff;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.9);
+            position: relative;
+        }
+        .modal-content h3 { margin-top: 0; color: #38bdf8; font-size: 1.25rem; }
+        .modal-content label { display: block; margin: 12px 0 4px 0; font-size: 0.85rem; color: #94a3b8; text-align: left; }
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #1e293b;
+            color: #fff;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .file-upload-box {
+            border: 2px dashed #0284c7;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            background: rgba(2, 132, 199, 0.05);
+            margin-top: 6px;
+            cursor: pointer;
+        }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-action {
+            background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1;
+        }
+        .btn-cancel {
+            background: #334155; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; flex: 1;
+        }
+        .close-btn {
+            position: absolute; top: 12px; right: 16px; font-size: 1.5rem; cursor: pointer; color: #94a3b8;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
     <div id="canvas-container"></div>
+    
+    <!-- Bilgi Kartı -->
     <div id="info-card">
         <img id="card-image" src="" alt="Reklam Alanı">
         <h3 id="card-title">Sanal Arsa</h3>
         <div id="card-status" class="status available">Müsait</div>
         <p id="card-desc">Arsa detayları burada görünecektir.</p>
-        <button id="card-btn" onclick="contactParcel()">Bu Arsayı İncele / Kirala</button>
+        <button id="card-btn" onclick="openActionModal()">Hemen Kirala ve Reklam Yükle</button>
+    </div>
+
+    <!-- Doğrudan İşlem Paneli -->
+    <div id="action-modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeActionModal()">&times;</span>
+            <h3 id="modal-title">Arsa Kiralama & Reklam Yayınlama</h3>
+            <form id="directActionForm" onsubmit="processDirectAction(event)">
+                <label>Reklam Görseli Yükleyin:</label>
+                <div class="file-upload-box">
+                    <input type="file" id="adImageFile" accept="image/*" required onchange="previewAdImage(event)">
+                </div>
+                
+                <label>Yönlendirilecek Web Sitesi / Link (Opsiyonel):</label>
+                <input type="url" id="adTargetUrl" placeholder="https://siteniz.com">
+
+                <label>Reklam Başlığı / Marka Adı:</label>
+                <input type="text" id="adTitle" required placeholder="Marka veya Firma Adı">
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeActionModal()">İptal</button>
+                    <button type="submit" class="btn-action">Ödeme ve Anında Yayınla</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
+        let selectedParcel = null;
+        let uploadedImageUrl = null;
+
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -94,10 +181,11 @@
         const globe = new THREE.Mesh(geometry, material);
         scene.add(globe);
 
-        // Görsellerle Genişletilmiş Arsa Listesi
+        // Arsa Listesi
         const pins = [];
         const pinLocations = [
             { 
+                id: 1,
                 lat: 38.4237, lon: 27.1428, 
                 title: "İzmir Kordon Parseli", 
                 desc: "Ege'nin incisinde yüksek görünürlüklü reklam alanı.", 
@@ -106,6 +194,7 @@
                 image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80"
             },
             { 
+                id: 2,
                 lat: 41.0082, lon: 28.9784, 
                 title: "İstanbul Boğaz Parseli", 
                 desc: "Kıtaların buluştuğu noktada küresel vitrin.", 
@@ -114,6 +203,7 @@
                 image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=500&q=80"
             },
             { 
+                id: 3,
                 lat: 39.9334, lon: 32.8597, 
                 title: "Ankara Başkent Parseli", 
                 desc: "Merkezi reklam ve marka tanıtım noktası.", 
@@ -122,6 +212,7 @@
                 image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80"
             },
             { 
+                id: 4,
                 lat: 40.7128, lon: -74.0060, 
                 title: "New York Times Square", 
                 desc: "Dünyanın finans ve medya merkezinde elit arsa.", 
@@ -130,6 +221,7 @@
                 image: "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=500&q=80"
             },
             { 
+                id: 5,
                 lat: 51.5074, lon: -0.1278, 
                 title: "Londra Merkez Parseli", 
                 desc: "Avrupa'nın finans kalbinde reklam alanı.", 
@@ -138,6 +230,7 @@
                 image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80"
             },
             { 
+                id: 6,
                 lat: 35.6762, lon: 139.6503, 
                 title: "Tokyo Shibuya Parseli", 
                 desc: "Asya'nın yüksek teknolojili reklam bölgesi.", 
@@ -174,6 +267,8 @@
         const mouse = new THREE.Vector2();
 
         window.addEventListener('click', (e) => {
+            if (e.target.closest('#info-card') || e.target.closest('#action-modal')) return;
+
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
@@ -182,27 +277,84 @@
 
             if (intersects.length > 0) {
                 const data = intersects[0].object.userData;
+                selectedParcel = data;
+
                 document.getElementById('card-title').innerText = data.title;
                 document.getElementById('card-desc').innerText = data.desc + " (" + data.price + ")";
                 document.getElementById('card-image').src = data.image;
                 
                 const statusEl = document.getElementById('card-status');
+                const btnEl = document.getElementById('card-btn');
+
                 if(data.status === "müsait") {
                     statusEl.innerText = "MÜSAİT - " + data.price;
                     statusEl.className = "status available";
-                    document.getElementById('card-btn').innerText = "Bu Arsayı Kirala";
+                    btnEl.innerText = "Hemen Kirala ve Reklam Yükle";
+                    btnEl.disabled = false;
+                    btnEl.style.opacity = "1";
                 } else {
                     statusEl.innerText = "KİRALANDI";
                     statusEl.className = "status taken";
-                    document.getElementById('card-btn').innerText = "Detayları Gör";
+                    btnEl.innerText = "Bu Arsa Dolu";
+                    btnEl.disabled = true;
+                    btnEl.style.opacity = "0.5";
                 }
 
                 document.getElementById('info-card').style.display = 'block';
             }
         });
 
-        function contactParcel() {
-            alert('Tebrikler! Bu arsayı kiralamak için rezervasyon talebiniz iletildi.');
+        function openActionModal() {
+            if (!selectedParcel || selectedParcel.status !== "müsait") return;
+            document.getElementById('modal-title').innerText = selectedParcel.title + " - Reklam Ekle";
+            document.getElementById('action-modal').style.display = 'flex';
+        }
+
+        function closeActionModal() {
+            document.getElementById('action-modal').style.display = 'none';
+            document.getElementById('directActionForm').reset();
+            uploadedImageUrl = null;
+        }
+
+        function previewAdImage(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    uploadedImageUrl = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function processDirectAction(e) {
+            e.preventDefault();
+            const title = document.getElementById('adTitle').value;
+
+            // Seçilen arsayı anında dolu yapıp yeni görseli atama
+            if (uploadedImageUrl) {
+                selectedParcel.image = uploadedImageUrl;
+            }
+            selectedParcel.title = title;
+            selectedParcel.status = "dolu";
+
+            // Kartı güncelle
+            document.getElementById('card-title').innerText = selectedParcel.title;
+            document.getElementById('card-image').src = selectedParcel.image;
+            document.getElementById('card-status').innerText = "KİRALANDI";
+            document.getElementById('card-status').className = "status taken";
+            document.getElementById('card-btn').innerText = "Bu Arsa Dolu";
+            document.getElementById('card-btn').disabled = true;
+            document.getElementById('card-btn').style.opacity = "0.5";
+
+            // Pin rengini kırmızı yap
+            const targetPin = pins.find(p => p.userData.id === selectedParcel.id);
+            if (targetPin) {
+                targetPin.material.color.setHex(0xef4444);
+            }
+
+            alert("Tebrikler! Reklamınız başarıyla oluşturuldu ve arsa canlı olarak güncellendi.");
+            closeActionModal();
         }
 
         function animate() {
