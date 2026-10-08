@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -12,8 +12,8 @@
 
         /* Özel Pin Tasarımları */
         .custom-pin {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
             border: 2px solid #ffffff;
             box-shadow: 0 0 10px rgba(0,0,0,0.8);
@@ -166,7 +166,7 @@
         let uploadedImageUrl = null;
         const markersMap = {};
 
-        // Harita Başlatma (Koyu Tema)
+        // Harita Başlatma
         const map = L.map('map', {
             center: [30, 20],
             zoom: 3,
@@ -181,19 +181,49 @@
             maxZoom: 19
         }).addTo(map);
 
-        // Parsel Veritabanı
+        // Kapsamlı Ülke ve Şehir Veritabanı
         const pinLocations = [
+            // Türkiye Bölge ve Şehirleri
             { id: 1, lat: 41.0082, lon: 28.9784, title: "İstanbul Boğaz Parseli", cityName: "İstanbul, Türkiye", desc: "Kıtaların buluştuğu küresel ticaret merkezi.", status: "müsait", price: "75 USD / Ay", image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=500&q=80" },
             { id: 2, lat: 39.9334, lon: 32.8597, title: "Ankara Merkez Parseli", cityName: "Ankara, Türkiye", desc: "Türkiye'nin siyasi ve idari kalbi.", status: "müsait", price: "40 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
             { id: 3, lat: 38.4237, lon: 27.1428, title: "İzmir Kordon Parseli", cityName: "İzmir, Türkiye", desc: "Ege'nin incisi ticaret bölgesi.", status: "müsait", price: "50 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
             { id: 4, lat: 36.8969, lon: 30.7133, title: "Antalya Sahil Parseli", cityName: "Antalya, Türkiye", desc: "Akdeniz'in turizm başkenti.", status: "müsait", price: "45 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
-            { id: 5, lat: 51.5074, lon: -0.1278, title: "Londra Finans Merkezi", cityName: "Londra, İngiltere", desc: "Avrupa'nın finans ve borsa kalbi.", status: "müsait", price: "90 USD / Ay", image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&q=80" },
-            { id: 6, lat: 48.8566, lon: 2.3522, title: "Paris Moda Parseli", cityName: "Paris, Fransa", desc: "Moda ve sanat merkezi.", status: "müsait", price: "85 USD / Ay", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&q=80" },
-            { id: 7, lat: 52.5200, lon: 13.4050, title: "Berlin Teknoloji Parseli", cityName: "Berlin, Almanya", desc: "Avrupa'nın teknoloji üssü.", status: "müsait", price: "75 USD / Ay", image: "https://images.unsplash.com/photo-1560969184-10fe8719e047?w=500&q=80" },
-            { id: 8, lat: 40.7128, lon: -74.0060, title: "New York Times Square", cityName: "New York, ABD", desc: "Dünyanın reklam ve finans merkezi.", status: "müsait", price: "120 USD / Ay", image: "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=500&q=80" },
-            { id: 9, lat: 35.6762, lon: 139.6503, title: "Tokyo Shibuya Parseli", cityName: "Tokyo, Japonya", desc: "Asya'nın yüksek teknoloji bölgesi.", status: "müsait", price: "100 USD / Ay", image: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=500&q=80" },
-            { id: 10, lat: 25.2048, lon: 55.2708, title: "Dubai Marina Parseli", cityName: "Dubai, BAE", desc: "Orta Doğu'nun lüks ve ticaret vitrini.", status: "müsait", price: "95 USD / Ay", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=500&q=80" },
-            { id: 11, lat: -33.8688, lon: 151.2093, title: "Sidney Liman Parseli", cityName: "Sidney, Avustralya", desc: "Okyanusya'nın yaşam ve ticaret merkezi.", status: "müsait", price: "70 USD / Ay", image: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=500&q=80" }
+            { id: 5, lat: 40.1828, lon: 29.0665, title: "Bursa Sanayi Parseli", cityName: "Bursa, Türkiye", desc: "Otomotiv ve sanayi merkezi.", status: "müsait", price: "35 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
+            { id: 6, lat: 37.0662, lon: 37.3833, title: "Gaziantep Ticaret Parseli", cityName: "Gaziantep, Türkiye", desc: "Güneydoğu'nun sanayi ve gastronomi merkezi.", status: "müsait", price: "30 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
+            { id: 7, lat: 40.9833, lon: 39.7276, title: "Trabzon Liman Parseli", cityName: "Trabzon, Türkiye", desc: "Karadeniz'in ticaret kapısı.", status: "müsait", price: "30 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
+            { id: 8, lat: 37.8667, lon: 32.4833, title: "Konya Merkez Parseli", cityName: "Konya, Türkiye", desc: "İç Anadolu'nun tarım ve sanayi merkezi.", status: "müsait", price: "30 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
+            { id: 9, lat: 37.0, lon: 35.3213, title: "Adana Çukurova Parseli", cityName: "Adana, Türkiye", desc: "Çukurova'nın ticaret ve tarım üssü.", status: "müsait", price: "30 USD / Ay", image: "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?w=500&q=80" },
+
+            // Avrupa Başkentleri ve Merkezleri
+            { id: 10, lat: 51.5074, lon: -0.1278, title: "Londra Finans Merkezi", cityName: "Londra, İngiltere", desc: "Avrupa'nın finans ve borsa kalbi.", status: "müsait", price: "90 USD / Ay", image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&q=80" },
+            { id: 11, lat: 48.8566, lon: 2.3522, title: "Paris Moda Parseli", cityName: "Paris, Fransa", desc: "Moda ve sanat merkezi.", status: "müsait", price: "85 USD / Ay", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&q=80" },
+            { id: 12, lat: 52.5200, lon: 13.4050, title: "Berlin Teknoloji Parseli", cityName: "Berlin, Almanya", desc: "Avrupa'nın teknoloji üssü.", status: "müsait", price: "75 USD / Ay", image: "https://images.unsplash.com/photo-1560969184-10fe8719e047?w=500&q=80" },
+            { id: 13, lat: 41.9028, lon: 12.4964, title: "Roma Tarih Parseli", cityName: "Roma, İtalya", desc: "Tarih ve turizm odaklı küresel nokta.", status: "müsait", price: "65 USD / Ay", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=500&q=80" },
+            { id: 14, lat: 40.4168, lon: -3.7038, title: "Madrid Ticaret Parseli", cityName: "Madrid, İspanya", desc: "İspanya'nın ana iş merkezi.", status: "müsait", price: "60 USD / Ay", image: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=500&q=80" },
+            { id: 15, lat: 52.3676, lon: 4.9041, title: "Amsterdam İnovasyon Parseli", cityName: "Amsterdam, Hollanda", desc: "Avrupa'nın lojistik ve teknoloji kavşağı.", status: "müsait", price: "70 USD / Ay", image: "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=500&q=80" },
+            { id: 16, lat: 55.7558, lon: 37.6173, title: "Moskova Ticaret Parseli", cityName: "Moskova, Rusya", desc: "Avrasya'nın ticaret ve finans merkezi.", status: "müsait", price: "70 USD / Ay", image: "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=500&q=80" },
+
+            // Amerika Kıtası
+            { id: 17, lat: 40.7128, lon: -74.0060, title: "New York Times Square", cityName: "New York, ABD", desc: "Dünyanın reklam ve finans merkezi.", status: "müsait", price: "120 USD / Ay", image: "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=500&q=80" },
+            { id: 18, lat: 34.0522, lon: -118.2437, title: "Los Angeles Medya Parseli", cityName: "Los Angeles, ABD", desc: "Eğlence ve sinema sektörü kalbi.", status: "müsait", price: "95 USD / Ay", image: "https://images.unsplash.com/photo-1580655653885-65763b2597d0?w=500&q=80" },
+            { id: 19, lat: 37.7749, lon: -122.4194, title: "San Francisco Silikon Vadisi", cityName: "San Francisco, ABD", desc: "Küresel teknoloji ve yazılım merkezi.", status: "müsait", price: "110 USD / Ay", image: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=500&q=80" },
+            { id: 20, lat: 43.6532, lon: -79.3832, title: "Toronto Finans Parseli", cityName: "Toronto, Kanada", desc: "Kanada'nın ekonomik kalbi.", status: "müsait", price: "70 USD / Ay", image: "https://images.unsplash.com/photo-1517090504586-fde19ea6066f?w=500&q=80" },
+            { id: 21, lat: -23.5505, lon: -46.6333, title: "Sao Paulo İş Merkezi", cityName: "Sao Paulo, Brezilya", desc: "Güney Amerika'nın ticaret devi.", status: "müsait", price: "55 USD / Ay", image: "https://images.unsplash.com/photo-1543059080-f9b12722bc9d?w=500&q=80" },
+            { id: 22, lat: 19.4326, lon: -99.1332, title: "Mexico City Parseli", cityName: "Meksika Şehri, Meksika", desc: "Latin Amerika'nın kültür ve finans üssü.", status: "müsait", price: "50 USD / Ay", image: "https://images.unsplash.com/photo-1512813389646-ac644634d4f8?w=500&q=80" },
+
+            // Asya ve Orta Doğu
+            { id: 23, lat: 35.6762, lon: 139.6503, title: "Tokyo Shibuya Parseli", cityName: "Tokyo, Japonya", desc: "Asya'nın yüksek teknoloji bölgesi.", status: "müsait", price: "100 USD / Ay", image: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=500&q=80" },
+            { id: 24, lat: 31.2304, lon: 121.4737, title: "Şanghay Liman Parseli", cityName: "Şanghay, Çin", desc: "Küresel ticaret limanı.", status: "müsait", price: "90 USD / Ay", image: "https://images.unsplash.com/photo-1548919973-57551525e18c?w=500&q=80" },
+            { id: 25, lat: 39.9042, lon: 116.4074, title: "Pekin Başkent Parseli", cityName: "Pekin, Çin", desc: "Asya'nın politik ve ekonomik merkezi.", status: "müsait", price: "85 USD / Ay", image: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=500&q=80" },
+            { id: 26, lat: 25.2048, lon: 55.2708, title: "Dubai Marina Parseli", cityName: "Dubai, BAE", desc: "Orta Doğu'nun lüks ve ticaret vitrini.", status: "müsait", price: "95 USD / Ay", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=500&q=80" },
+            { id: 27, lat: 24.7136, lon: 46.6753, title: "Riyad Ticaret Parseli", cityName: "Riyad, Suudi Arabistan", desc: "Körfez bölgesinin finans merkezi.", status: "müsait", price: "80 USD / Ay", image: "https://images.unsplash.com/photo-1586724237569-f3d029bf04a0?w=500&q=80" },
+            { id: 28, lat: 28.6139, lon: 77.2090, title: "Yeni Delhi Ticaret Parseli", cityName: "Yeni Delhi, Hindistan", desc: "Güney Asya'nın pazar merkezi.", status: "müsait", price: "60 USD / Ay", image: "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&q=80" },
+            { id: 29, lat: 1.3521, lon: 103.8198, title: "Singapur Finans Üssü", cityName: "Singapur", desc: "Güneydoğu Asya'nın teknoloji üssü.", status: "müsait", price: "85 USD / Ay", image: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=500&q=80" },
+
+            // Afrika ve Okyanusya
+            { id: 30, lat: -33.8688, lon: 151.2093, title: "Sidney Liman Parseli", cityName: "Sidney, Avustralya", desc: "Okyanusya'nın yaşam ve ticaret merkezi.", status: "müsait", price: "70 USD / Ay", image: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=500&q=80" },
+            { id: 31, lat: 30.0444, lon: 31.2357, title: "Kahire Nil Parseli", cityName: "Kahire, Mısır", desc: "Kuzey Afrika'nın kültürel kavşağı.", status: "müsait", price: "40 USD / Ay", image: "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=500&q=80" },
+            { id: 32, lat: -26.2041, lon: 28.0473, title: "Johannesburg Parseli", cityName: "Johannesburg, Güney Afrika", desc: "Afrika'nın ekonomik başkenti.", status: "müsait", price: "45 USD / Ay", image: "https://images.unsplash.com/photo-1577948000119-2797b7b26102?w=500&q=80" }
         ];
 
         // Harita üzerine pinlerin ve kalıcı etiketlerin eklenmesi
@@ -202,12 +232,11 @@
             
             const customIcon = L.divIcon({
                 className: 'custom-pin ' + pinClass,
-                iconSize: [16, 16]
+                iconSize: [14, 14]
             });
 
             const marker = L.marker([loc.lat, loc.lon], { icon: customIcon }).addTo(map);
             
-            // Şehir adını kalıcı olarak pinin yanına sabitleme
             marker.bindTooltip(loc.cityName, {
                 permanent: true,
                 direction: 'right',
@@ -217,7 +246,6 @@
             marker.userData = loc;
             markersMap[loc.id] = marker;
 
-            // Tıklama olayı
             marker.on('click', () => {
                 selectedParcel = marker.userData;
 
@@ -246,7 +274,6 @@
             });
         });
 
-        // Haritada boş bir yere tıklandığında bilgi kartını kapat
         map.on('click', (e) => {
             document.getElementById('info-card').style.display = 'none';
         });
@@ -292,12 +319,11 @@
             document.getElementById('card-btn').disabled = true;
             document.getElementById('card-btn').style.opacity = "0.5";
 
-            // Pini kırmızıya (dolu) çevir
             const marker = markersMap[selectedParcel.id];
             if (marker) {
                 const redIcon = L.divIcon({
                     className: 'custom-pin pin-taken',
-                    iconSize: [16, 16]
+                    iconSize: [14, 14]
                 });
                 marker.setIcon(redIcon);
             }
@@ -307,15 +333,14 @@
         }
     </script>
     <style>
-        /* Leaflet Kalıcı Tooltip Özelleştirmesi */
         .leaflet-tooltip-own {
             background: rgba(15, 23, 42, 0.85);
             color: #38bdf8;
             border: 1px solid rgba(56, 189, 248, 0.3);
             border-radius: 4px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
-            padding: 2px 6px;
+            padding: 2px 5px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
     </style>
