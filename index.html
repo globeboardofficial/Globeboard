@@ -195,7 +195,1712 @@ body { margin: 0; }
 .hero-copy { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; min-width: 0; }
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
 .hero-globe { background: radial-gradient(circle at 50% 50%, #E6F0F7 0, #FFFFFF 66%); border-radius: 50%; }
+.hero-globe canvas { <!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Globeboard</title>
+<meta name="description" content="Globeboard: dünya küresi üzerinde ülke veya şehir seçip reklam alanı kiralayın. Aylık veya yıllık reklam ver.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Düzen: solda dönen küre (masaüstünde yapışkan), sağda seçilen bölgenin kiralama paneli. Telefonda alt alta. */
+:root {
+  --bg: #FFFFFF;
+  --surface: #F4F7F9;
+  --ink: #12212C;
+  --muted: #566874;
+  --line: #C5D1D9;
+  --ocean: #B9D3E4;
+  --grid: rgba(18, 33, 44, .12);
+  --land: #F4F7F5;
+  --landline: #6B879A;
+  --accent: #C2410C;
+  --accent-ink: #FFFFFF;
+  --avail: #0F766E;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+/* Tek açık tema: Globeboard her zaman beyaz zeminde kalır. */
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; padding-inline: 16px; padding-block: 20px 40px; }
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(28px, 5vw, 42px); font-weight: 800; line-height: 1; letter-spacing: -.03em; display: flex; align-items: center; gap: 10px; }
+h2 { font-size: 28px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+p { margin: 0; }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mark { width: 1em; height: 1em; flex: none; }
+
+header { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: end; justify-content: space-between; }
+.lead { max-width: 52ch; color: var(--muted); margin-top: 10px; }
+.tools-top { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.search, .langsel { display: flex; flex-direction: column; gap: 4px; }
+.search { min-width: min(100%, 260px); }
+.search label, .langsel label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.search input, .langsel select { height: 42px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0 12px; width: 100%; }
+.notice { font-family: var(--font-mono); font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding-block: 8px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (min-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 28px; }
+  .stage-col { position: sticky; top: 16px; }
+}
+.stage { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+#globe { display: block; width: 100%; aspect-ratio: 1 / 1; max-height: 78vh; touch-action: pan-y; cursor: grab; }
+#globe.hit { cursor: pointer; }
+#globe.drag { cursor: grabbing; }
+.tools { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.tools button { width: 38px; height: 38px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; cursor: pointer; font-size: 18px; line-height: 1; }
+.tools button:hover { border-color: var(--accent); }
+#tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; padding: 5px 9px; border-radius: 4px; white-space: nowrap; max-width: 80%; overflow: hidden; text-overflow: ellipsis; transform: translate(12px, -34px); }
+#stage-msg { position: absolute; inset: auto 12px 12px 12px; font-size: 13px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend em { font-style: normal; }
+.sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--landline); background: var(--land); }
+.sw.rent { background: linear-gradient(135deg, #1D4ED8 50%, #15803D 50%); border-color: transparent; }
+.sw.sel { background: transparent; border: 2px solid var(--accent); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.reg-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 4px; }
+.pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
+.pill.free { color: var(--avail); }
+.pill.taken { color: var(--accent); }
+.pill.review { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips.scroll { max-height: 220px; overflow-y: auto; padding-block: 2px; }
+.chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 11px; font-size: 13px; cursor: pointer; }
+.chip:hover { border-color: var(--accent); }
+.chip small { font-family: var(--font-mono); color: var(--muted); margin-inline-start: 6px; }
+.suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; }
+.sec { display: flex; flex-direction: column; gap: 10px; }
+
+.plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.plan { text-align: start; border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.plan[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.plan-name { font-size: 13px; color: var(--muted); }
+.plan-price { font-family: var(--font-mono); font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.plan-sub { font-size: 12px; color: var(--muted); }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper > span { color: var(--muted); font-size: 14px; margin-inline-end: auto; }
+.stepper button { width: 38px; height: 38px; border: 1px solid var(--line); background: transparent; border-radius: 6px; cursor: pointer; font-size: 18px; }
+.stepper button:hover { border-color: var(--accent); }
+.stepper output { min-width: 84px; text-align: center; font-family: var(--font-mono); }
+
+.fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 13px; color: var(--muted); }
+.field input[type="text"], .field input[type="url"], .field textarea { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 9px 11px; width: 100%; min-width: 0; }
+.field textarea { resize: vertical; min-height: 64px; }
+.field input[type="file"] { font-size: 13px; max-width: 100%; }
+.colors { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.colors input[type="color"] { width: 42px; height: 34px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+.preset { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+.rules { font-size: 13px; color: var(--muted); border-inline-start: 3px solid var(--line); padding-inline-start: 10px; }
+.check { display: flex; align-items: start; gap: 10px; font-size: 14px; cursor: pointer; }
+.check input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--accent); }
+
+.ad { border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.ad img { display: block; width: 100%; max-height: 180px; object-fit: cover; }
+.ad-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
+.ad-brand { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .85; }
+.ad-head { font-family: var(--font-display); font-size: 22px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+.ad-text { font-size: 14px; opacity: .92; overflow-wrap: anywhere; }
+.ad-link { font-size: 13px; font-weight: 600; text-decoration: underline; color: inherit; width: fit-content; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 0; }
+.meta dt { font-size: 12px; color: var(--muted); }
+.meta dd { margin: 0; font-weight: 600; }
+.quote { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; flex-wrap: wrap; }
+.quote .total { font-family: var(--font-mono); font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.quote .until { font-size: 13px; color: var(--muted); }
+.cta { height: 46px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 16px; cursor: pointer; padding-inline: 16px; }
+.cta:hover { filter: brightness(1.08); }
+.cta.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.err { color: var(--accent); font-size: 13px; min-height: 1em; }
+.fine { font-size: 12px; color: var(--muted); }
+
+.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: start; }
+.steps li::before { content: counter(s); font-family: var(--font-mono); width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 50%; display: grid; place-items: center; }
+.steps b { display: block; }
+.steps span { color: var(--muted); font-size: 14px; }
+
+.list-sec { display: flex; flex-direction: column; gap: 10px; }
+.rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 10px; }
+.row { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 10px; align-items: center; text-align: start; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+.row:hover { border-color: var(--accent); }
+.dot { width: 14px; height: 14px; border-radius: 50%; }
+.row b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row small { color: var(--muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.foot { border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--muted); }
+.foot .mailrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.foot a { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; max-width: calc(100% - 32px); opacity: 0; pointer-events: none; transition: opacity .2s; }
+#toast.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+
+.land { gap: 36px; }
+.land section { display: flex; flex-direction: column; gap: 12px; }
+.land-top { display: flex; justify-content: flex-end; }
+.hero { align-items: flex-start; padding-block: 8px 4px; gap: 16px; }
+h1.brand { font-size: clamp(44px, 9vw, 68px); letter-spacing: -.035em; gap: 14px; }
+.hero-lead { max-width: 46ch; font-size: 18px; color: var(--muted); }
+.hero .cta { padding-inline: 22px; }
+.steps.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 24px; }
+.tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.tbl { min-width: 440px; display: flex; flex-direction: column; }
+.tr { display: grid; grid-template-columns: 28px minmax(0, 1fr) 84px 84px; gap: 12px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); }
+.tr:first-child { border-top: 0; }
+.tr.th { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--surface); }
+.tn { font-family: var(--font-mono); color: var(--muted); }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: end; }
+.clauses { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+.clause { border-top: 2px solid var(--ink); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.clause h3 { color: var(--ink); }
+.accept { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; gap: 14px; }
+.until.wide { flex-basis: 100%; }
+
+/* Açılış sayfası: sabit üst çubuk, küreli giriş, fiyat kartları */
+html { color-scheme: light; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; }
+[hidden] { display: none !important; }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; margin-inline: -16px; padding-inline: 16px; background: rgba(255, 255, 255, .92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.topbar-in { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 14px; height: 60px; }
+.tb-brand { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 800; font-size: 21px; letter-spacing: -.02em; margin-inline-end: auto; }
+.tb-brand .mark { width: 26px; height: 26px; }
+.tb-nav { display: none; gap: 24px; margin-inline-end: 8px; }
+.tb-nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; }
+.tb-nav a:hover { color: var(--ink); }
+@media (min-width: 760px) { .tb-nav { display: flex; } }
+.topbar .langsel label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.topbar .langsel select { height: 38px; width: auto; min-width: 104px; }
+.tb-cta { height: 38px; padding-inline: 14px; font-size: 14px; white-space: nowrap; }
+@media (max-width: 520px) { .tb-cta { display: none; } }
+.land { padding-top: 12px; }
+.land section { scroll-margin-top: 76px; }
+.land section.hero2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: center; padding-block: 12px 8px; }
+@media (min-width: 860px) { .land section.hero2 { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 40px; } }
+.hero-copy { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; min-width: 0; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.hero-globe { background: radial-gradient(circle at 50% 50%, #E6F0F7 0, #FFFFFF 66%); border-radius: 50%; }
 .hero-globe canvas { display: block; width: 100%; max-width: 500px; aspect-ratio: 1 / 1; margin-inline: auto; }
+.steps.cols li { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--surface); }
+.exgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px; }
+.ex { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ex .eyebrow { margin: 0; }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 12px; }
+.pcard { border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--bg); min-width: 0; }
+.pcard .tn { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.pcard .pc-names { font-weight: 600; min-height: 2.8em; overflow-wrap: anywhere; }
+.pcard .pc-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.pcard .pc-row span { color: var(--muted); font-size: 13px; }
+.pcard .pc-row b { font-family: var(--font-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.badge { align-self: flex-start; font-size: 12px; font-weight: 600; color: var(--avail); border: 1px solid var(--avail); border-radius: 999px; padding: 2px 10px; }
+.accept { border: 2px solid var(--ink); background: var(--bg); }
+</style>
+
+</head>
+<body>
+<div id="landing">
+<div class="topbar"><div class="topbar-in">
+  <span class="tb-brand"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.4"/><ellipse cx="16" cy="16" rx="6" ry="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 16h25" stroke="currentColor" stroke-width="2"/><circle cx="22.5" cy="9.5" r="3.4" fill="var(--accent)"/></svg>Globeboard</span>
+  <nav class="tb-nav" aria-label="Globeboard"><a href="#howsec" data-i18n="howH"></a><a href="#plans" data-i18n="plansH"></a><a href="#terms" data-i18n="navTerms"></a></nav>
+  <div class="langsel"><label for="lang0" data-i18n="langL"></label><select id="lang0"></select></div>
+  <button type="button" class="cta tb-cta" id="tbCta" data-i18n="heroCta"></button>
+</div></div>
+<div class="wrap land">
+  <section class="hero hero2">
+    <div class="hero-copy">
+      <h1 class="brand">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.4"/><ellipse cx="16" cy="16" rx="6" ry="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 16h25" stroke="currentColor" stroke-width="2"/><circle cx="22.5" cy="9.5" r="3.4" fill="var(--accent)"/></svg>
+        Globeboard
+      </h1>
+      <p class="hero-lead" data-i18n="lead"></p>
+      <div class="hero-actions"><button type="button" class="cta" id="heroCta" data-i18n="heroCta"></button><span class="fine" id="heroCount"></span></div>
+    </div>
+    <div class="hero-globe"><canvas id="heroGlobe" role="img" aria-label="Globeboard"></canvas></div>
+  </section>
+  <section id="howsec" aria-labelledby="howh">
+    <h3 id="howh" data-i18n="howH"></h3>
+    <ol class="steps cols" id="how"></ol>
+  </section>
+  <section id="exsec" aria-labelledby="exh">
+    <h3 id="exh" data-i18n="exH"></h3>
+    <p data-i18n="exD"></p>
+    <div class="exgrid" id="exgrid"></div>
+  </section>
+  <section id="plans" aria-labelledby="plansh">
+    <h3 id="plansh" data-i18n="plansH"></h3>
+    <p data-i18n="plansD"></p>
+    <div class="pgrid" id="plantbl"></div>
+    <p class="fine" data-i18n="cityNote"></p>
+    <p class="fine" id="minall"></p>
+    <p class="fine" data-i18n="curAll"></p>
+  </section>
+  <section id="terms" aria-labelledby="termsh">
+    <h3 id="termsh" data-i18n="termsH"></h3>
+    <div class="clauses" id="clauses"></div>
+    <p class="fine" data-i18n="draftNote"></p>
+  </section>
+  <section class="accept">
+    <label class="check" for="a1"><input id="a1" type="checkbox"><span data-i18n="accept1"></span></label>
+    <label class="check" for="a2"><input id="a2" type="checkbox"><span data-i18n="accept2"></span></label>
+    <p class="err" id="aerr" role="alert"></p>
+    <button type="button" class="cta" id="go" data-i18n="goBtn"></button>
+  </section>
+  <footer class="foot">
+    <p data-i18n="disc"></p>
+    <p class="mailrow"><span data-i18n="contact"></span>: <a id="mail2" href="mailto:globeboard.official@gmail.com">globeboard.official@gmail.com</a> <button type="button" class="chip" data-i18n="copy"></button></p>
+    <p data-i18n="noData"></p>
+  </footer>
+</div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <div>
+      <h1>
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.4"/><ellipse cx="16" cy="16" rx="6" ry="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 16h25" stroke="currentColor" stroke-width="2"/><circle cx="22.5" cy="9.5" r="3.4" fill="var(--accent)"/></svg>
+        Globeboard
+      </h1>
+      <p class="lead" data-i18n="lead"></p>
+    </div>
+    <div class="tools-top">
+      <button type="button" class="chip" id="toLanding" data-i18n="navTerms"></button>
+      <div class="langsel">
+        <label for="lang" data-i18n="langL"></label>
+        <select id="lang"></select>
+      </div>
+      <div class="search">
+        <label for="search" data-i18n="searchL"></label>
+        <input id="search" type="text" list="places" data-i18n-ph="searchP" autocomplete="off">
+        <datalist id="places"></datalist>
+      </div>
+    </div>
+  </header>
+  <p class="notice" data-i18n="notice"></p>
+
+  <div class="layout">
+    <div class="stage-col">
+      <div class="stage" id="stage">
+        <canvas id="globe" role="img" data-i18n-aria="globeAria"></canvas>
+        <div class="tools">
+          <button type="button" id="zin" data-i18n-aria="zin">+</button>
+          <button type="button" id="zout" data-i18n-aria="zout">−</button>
+          <button type="button" id="spin" aria-pressed="true">⟳</button>
+        </div>
+        <div id="tip" hidden></div>
+        <div id="stage-msg" hidden></div>
+      </div>
+      <div class="legend">
+        <span><i class="sw"></i><em data-i18n="lgFree"></em></span>
+        <span><i class="sw rent"></i><em data-i18n="lgRent"></em></span>
+        <span><i class="sw sel"></i><em data-i18n="lgSel"></em></span>
+      </div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+
+  <section class="list-sec" aria-labelledby="rt">
+    <h3 id="rt" data-i18n="rentedH"></h3>
+    <div class="rows" id="rows"></div>
+  </section>
+
+  <footer class="foot">
+    <p data-i18n="disc"></p>
+    <p class="mailrow"><span data-i18n="contact"></span>: <a id="mail" href="mailto:globeboard.official@gmail.com">globeboard.official@gmail.com</a> <button type="button" class="chip" id="copymail" data-i18n="copy"></button></p>
+    <p data-i18n="noData"></p>
+  </footer>
+</div>
+<div id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+/* echarts dünya haritası dosyası kendini bu nesneye kaydeder; haritayı buradan alıyoruz */
+window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/js/world.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Diller ---------- */
+  var LANGS = [['tr', 'Türkçe'], ['en', 'English'], ['de', 'Deutsch'], ['fr', 'Français'], ['es', 'Español'], ['pt', 'Português'], ['it', 'Italiano'], ['ru', 'Русский'], ['ar', 'العربية'], ['zh', '中文'], ['ja', '日本語'], ['ko', '한국어']];
+  var LANG_NAMES = {}; LANGS.forEach(function (l) { LANG_NAMES[l[0]] = l[1]; });
+  var CC_LANG = {};
+  [['en', 'USA GBR CAN AUS IND ZAF NGA KEN SGP NZL IRL'], ['de', 'DEU AUT CHE'], ['fr', 'FRA BEL'], ['es', 'ESP MEX ARG COL CHL PER'], ['pt', 'BRA PRT'], ['it', 'ITA'], ['ru', 'RUS KAZ BLR'],
+   ['ar', 'SAU ARE EGY IRQ SYR MAR DZA QAT KWT JOR LBN LBY TUN YEM OMN'], ['zh', 'CHN TWN'], ['ja', 'JPN'], ['ko', 'KOR'], ['tr', 'TUR']].forEach(function (p) {
+    p[1].split(' ').forEach(function (c) { CC_LANG[c] = p[0]; });
+  });
+  var A2 = {};
+  ('AFG:AF,ALB:AL,DZA:DZ,AGO:AO,ARG:AR,ARM:AM,AUS:AU,AUT:AT,AZE:AZ,BHS:BS,BHR:BH,BGD:BD,BLR:BY,BEL:BE,BLZ:BZ,BEN:BJ,BTN:BT,BOL:BO,BIH:BA,BWA:BW,BRA:BR,BRN:BN,BGR:BG,BFA:BF,BDI:BI,KHM:KH,CMR:CM,CAN:CA,CAF:CF,TCD:TD,CHL:CL,CHN:CN,COL:CO,COG:CG,COD:CD,CRI:CR,CIV:CI,HRV:HR,CUB:CU,CYP:CY,CZE:CZ,DNK:DK,DJI:DJ,DOM:DO,ECU:EC,EGY:EG,SLV:SV,GNQ:GQ,ERI:ER,EST:EE,ETH:ET,FJI:FJ,FIN:FI,FRA:FR,GAB:GA,GMB:GM,GEO:GE,DEU:DE,GHA:GH,GRC:GR,GRL:GL,GTM:GT,GIN:GN,GNB:GW,GUY:GY,HTI:HT,HND:HN,HUN:HU,ISL:IS,IND:IN,IDN:ID,IRN:IR,IRQ:IQ,IRL:IE,ISR:IL,ITA:IT,JAM:JM,JPN:JP,JOR:JO,KAZ:KZ,KEN:KE,PRK:KP,KOR:KR,KWT:KW,KGZ:KG,LAO:LA,LVA:LV,LBN:LB,LSO:LS,LBR:LR,LBY:LY,LTU:LT,LUX:LU,MKD:MK,MDG:MG,MWI:MW,MYS:MY,MLI:ML,MLT:MT,MRT:MR,MEX:MX,MDA:MD,MNG:MN,MNE:ME,MAR:MA,MOZ:MZ,MMR:MM,NAM:NA,NPL:NP,NLD:NL,NZL:NZ,NIC:NI,NER:NE,NGA:NG,NOR:NO,OMN:OM,PAK:PK,PSE:PS,PAN:PA,PNG:PG,PRY:PY,PER:PE,PHL:PH,POL:PL,PRT:PT,PRI:PR,QAT:QA,ROU:RO,RUS:RU,RWA:RW,SAU:SA,SEN:SN,SRB:RS,SLE:SL,SGP:SG,SVK:SK,SVN:SI,SLB:SB,SOM:SO,ZAF:ZA,SSD:SS,ESP:ES,LKA:LK,SDN:SD,SUR:SR,SWZ:SZ,SWE:SE,CHE:CH,SYR:SY,TWN:TW,TJK:TJ,TZA:TZ,THA:TH,TLS:TL,TGO:TG,TTO:TT,TUN:TN,TUR:TR,TKM:TM,UGA:UG,UKR:UA,ARE:AE,GBR:GB,USA:US,URY:UY,UZB:UZ,VUT:VU,VEN:VE,VNM:VN,YEM:YE,ZMB:ZM,ZWE:ZW,ESH:EH').split(',').forEach(function (p) { var a = p.split(':'); A2[a[0]] = a[1]; });
+
+  var I18N = {
+    tr: {
+      lead: 'Küreyi döndür, bir ülke ya da şehir seç, reklam alanını aylık veya yıllık kirala. Reklamın o noktada yayınlanır.',
+      searchL: 'Ülke veya şehir ara', searchP: 'Örn. Japonya, İstanbul',
+      notice: 'Prototip. Ödeme alınmaz, fiyatlar örnektir, örnek reklamlar uydurma markalara aittir.',
+      lgFree: 'Müsait', lgRent: 'Kiralandı, marka renginde', lgSel: 'Seçili',
+      rentedH: 'Kiralanan alanlar', zin: 'Yakınlaştır', zout: 'Uzaklaştır', spinOff: 'Dönmeyi durdur', spinOn: 'Dönmeyi başlat',
+      globeAria: 'Dünya küresi. Sürükleyerek döndür, bir ülkeye veya şehre dokunarak seç.',
+      introK: 'Başlamak için', introH: 'Bir alan seç',
+      s1h: 'Yeri seç', s1d: 'Küre üzerinde bir ülkeye ya da şehir noktasına dokun. Arama kutusunu da kullanabilirsin.',
+      s2h: 'Süreyi belirle', s2d: 'Aylık ya da yıllık. Yıllık planda iki ay ücretsiz.',
+      s3h: 'Reklamını hazırla', s3d: 'Marka, başlık, metin, renk ve görsel. Önizleme anında güncellenir.',
+      count: '{c} ülke ve {y} şehir kiralanabilir.',
+      country: 'Ülke', city: 'Şehir', cities: 'Bu ülkedeki şehirler', toCountry: '{n} alanına git',
+      free: 'Müsait', taken: 'Kiralandı', review: 'İncelemede', liveAd: 'Yayındaki reklam', advertiser: 'Reklamveren', plan: 'Plan', ends: 'Bitiş',
+      example: 'Bu bir örnek reklamdır. Başka bir ülke ya da şehir seçerek kendi reklamını yayınlayabilirsin.', endIt: 'Kiralamayı bitir',
+      period: 'Kiralama süresi', monthly: 'Aylık', yearly: 'Yıllık', perMonth: 'ayda', perYear: 'yılda · 2 ay ücretsiz', duration: 'Süre',
+      yourAd: 'Reklamın', brand: 'Marka adı', headline: 'Başlık', text: 'Metin', color: 'Renk', link: 'Bağlantı (isteğe bağlı)', image: 'Görsel (isteğe bağlı)', preview: 'Önizleme',
+      phBrand: 'Marka adı', phHead: 'Başlığın burada görünür', more: 'Daha fazla bilgi',
+      rulesT: 'Reklam kuralları: yasa dışı, yanıltıcı, telif hakkı ihlali içeren, nefret veya şiddet içeren içerik yasaktır. Her reklam yayından önce incelenir.', rulesOk: 'Reklam kurallarını okudum ve kabul ediyorum.',
+      rentBtn: 'Kirala ve gönder', proto: 'Prototip: ödeme alınmaz. Kiralama yalnızca bu tarayıcıda saklanır.',
+      eReq: 'Marka adı ve başlık gerekli.', eLink: 'Bağlantı http:// ya da https:// ile başlamalı.', eRules: 'Reklam kurallarını kabul etmelisin.', eImg: 'Görsel okunamadı. Başka bir dosya dene.',
+      tReview: '{r} için talebin alındı, incelemede.', tEnd: '{r} için kiralama bitti.', tApprove: '{r} için reklamın yayında.',
+      rvNote: 'Reklamın incelemede. Onaydan sonra küre üzerinde yayınlanır.', approve: 'Prototip: onayı simüle et',
+      contact: 'İletişim', copy: 'Kopyala', copied: 'Kopyalandı', noData: 'Bu prototip hiçbir kişisel veri toplamaz.',
+      disc: 'Reklam alanı kiralama hizmeti. Gerçek arsa veya gayrimenkulle ilgisi yoktur.', langL: 'Dil',
+      suggest: 'Bu ülkenin dili: {l}', suggestBtn: 'Siteyi {l} göster', noRent: 'Henüz kiralanan alan yok.',
+      mapFail: 'Ülke sınırları yüklenemedi. Şehir noktaları ve arama yine çalışır.', storeFull: 'Tarayıcı kaydı dolu. Kiralama bu oturumda geçerli.'
+    },
+    en: {
+      lead: 'Spin the globe, pick a country or city, and rent ad space by the month or year. Your ad appears on that spot.',
+      searchL: 'Search country or city', searchP: 'e.g. Japan, Istanbul',
+      notice: 'Prototype. No payment is taken, prices are examples, sample ads belong to made-up brands.',
+      lgFree: 'Available', lgRent: 'Rented, in the brand\'s color', lgSel: 'Selected',
+      rentedH: 'Rented spots', zin: 'Zoom in', zout: 'Zoom out', spinOff: 'Stop rotation', spinOn: 'Start rotation',
+      globeAria: 'Globe. Drag to rotate, tap a country or city to select it.',
+      introK: 'To start', introH: 'Pick a spot',
+      s1h: 'Choose a spot', s1d: 'Tap a country or a city dot on the globe, or use the search box.',
+      s2h: 'Set the period', s2d: 'Monthly or yearly. Yearly includes two free months.',
+      s3h: 'Prepare your ad', s3d: 'Brand, headline, text, color and image. The preview updates instantly.',
+      count: '{c} countries and {y} cities available to rent.',
+      country: 'Country', city: 'City', cities: 'Cities in this country', toCountry: 'Go to {n}',
+      free: 'Available', taken: 'Rented', review: 'In review', liveAd: 'Live ad', advertiser: 'Advertiser', plan: 'Plan', ends: 'Ends',
+      example: 'This is a sample ad. Pick another country or city to publish your own.', endIt: 'End rental',
+      period: 'Rental period', monthly: 'Monthly', yearly: 'Yearly', perMonth: 'per month', perYear: 'per year · 2 months free', duration: 'Duration',
+      yourAd: 'Your ad', brand: 'Brand name', headline: 'Headline', text: 'Text', color: 'Color', link: 'Link (optional)', image: 'Image (optional)', preview: 'Preview',
+      phBrand: 'Brand name', phHead: 'Your headline appears here', more: 'Learn more',
+      rulesT: 'Ad rules: no illegal, misleading, copyright-infringing, hateful or violent content. Every ad is reviewed before it goes live.', rulesOk: 'I have read and accept the ad rules.',
+      rentBtn: 'Rent and submit', proto: 'Prototype: no payment is taken. The rental is stored only in this browser.',
+      eReq: 'Brand name and headline are required.', eLink: 'The link must start with http:// or https://.', eRules: 'Please accept the ad rules.', eImg: 'The image could not be read. Try another file.',
+      tReview: 'Request for {r} received. It is in review.', tEnd: 'Rental for {r} ended.', tApprove: 'Your ad for {r} is live.',
+      rvNote: 'Your ad is in review. It appears on the globe once approved.', approve: 'Prototype: simulate approval',
+      contact: 'Contact', copy: 'Copy', copied: 'Copied', noData: 'This prototype collects no personal data.',
+      disc: 'Ad space rental service. No connection to real land or property.', langL: 'Language',
+      suggest: 'Language of this country: {l}', suggestBtn: 'Show the site in {l}', noRent: 'No spots rented yet.',
+      mapFail: 'Country borders could not be loaded. City dots and search still work.', storeFull: 'Browser storage is full. The rental is valid for this session only.'
+    },
+    de: {
+      lead: 'Dreh den Globus, wähle ein Land oder eine Stadt und miete Werbefläche monatlich oder jährlich. Deine Anzeige erscheint genau dort.',
+      searchL: 'Land oder Stadt suchen', searchP: 'z. B. Japan, Berlin',
+      notice: 'Prototyp. Es wird keine Zahlung abgewickelt, die Preise sind Beispiele, die Beispielanzeigen gehören zu erfundenen Marken.',
+      lgFree: 'Verfügbar', lgRent: 'Vermietet, in der Markenfarbe', lgSel: 'Ausgewählt',
+      rentedH: 'Vermietete Flächen', zin: 'Vergrößern', zout: 'Verkleinern', spinOff: 'Drehung anhalten', spinOn: 'Drehung starten',
+      globeAria: 'Globus. Zum Drehen ziehen, ein Land oder eine Stadt zum Auswählen antippen.',
+      introK: 'So geht\'s', introH: 'Wähle eine Fläche',
+      s1h: 'Ort wählen', s1d: 'Tippe auf ein Land oder einen Stadtpunkt auf dem Globus oder nutze die Suche.',
+      s2h: 'Dauer festlegen', s2d: 'Monatlich oder jährlich. Jährlich sind zwei Monate gratis.',
+      s3h: 'Anzeige gestalten', s3d: 'Marke, Titel, Text, Farbe und Bild. Die Vorschau aktualisiert sich sofort.',
+      count: '{c} Länder und {y} Städte zur Miete.',
+      country: 'Land', city: 'Stadt', cities: 'Städte in diesem Land', toCountry: 'Zu {n}',
+      free: 'Verfügbar', taken: 'Vermietet', review: 'In Prüfung', liveAd: 'Aktive Anzeige', advertiser: 'Werbetreibender', plan: 'Tarif', ends: 'Endet',
+      example: 'Dies ist eine Beispielanzeige. Wähle ein anderes Land oder eine andere Stadt für deine eigene.', endIt: 'Miete beenden',
+      period: 'Mietdauer', monthly: 'Monatlich', yearly: 'Jährlich', perMonth: 'pro Monat', perYear: 'pro Jahr · 2 Monate gratis', duration: 'Laufzeit',
+      yourAd: 'Deine Anzeige', brand: 'Markenname', headline: 'Titel', text: 'Text', color: 'Farbe', link: 'Link (optional)', image: 'Bild (optional)', preview: 'Vorschau',
+      phBrand: 'Markenname', phHead: 'Dein Titel erscheint hier', more: 'Mehr erfahren',
+      rulesT: 'Anzeigenregeln: keine illegalen, irreführenden, urheberrechtsverletzenden, hasserfüllten oder gewalttätigen Inhalte. Jede Anzeige wird vor der Veröffentlichung geprüft.', rulesOk: 'Ich habe die Anzeigenregeln gelesen und akzeptiere sie.',
+      rentBtn: 'Mieten und einreichen', proto: 'Prototyp: Es wird nicht bezahlt. Die Miete wird nur in diesem Browser gespeichert.',
+      eReq: 'Markenname und Titel sind erforderlich.', eLink: 'Der Link muss mit http:// oder https:// beginnen.', eRules: 'Bitte akzeptiere die Anzeigenregeln.', eImg: 'Das Bild konnte nicht gelesen werden. Versuche eine andere Datei.',
+      tReview: 'Anfrage für {r} eingegangen. Sie wird geprüft.', tEnd: 'Miete für {r} beendet.', tApprove: 'Deine Anzeige für {r} ist online.',
+      rvNote: 'Deine Anzeige wird geprüft. Nach der Freigabe erscheint sie auf dem Globus.', approve: 'Prototyp: Freigabe simulieren',
+      contact: 'Kontakt', copy: 'Kopieren', copied: 'Kopiert', noData: 'Dieser Prototyp erhebt keine personenbezogenen Daten.',
+      disc: 'Vermietung von Werbeflächen. Kein Bezug zu echtem Land oder Immobilien.', langL: 'Sprache',
+      suggest: 'Sprache dieses Landes: {l}', suggestBtn: 'Seite auf {l} anzeigen', noRent: 'Noch keine Flächen vermietet.',
+      mapFail: 'Ländergrenzen konnten nicht geladen werden. Stadtpunkte und Suche funktionieren weiterhin.', storeFull: 'Browser-Speicher voll. Die Miete gilt nur für diese Sitzung.'
+    },
+    fr: {
+      lead: 'Fais tourner le globe, choisis un pays ou une ville et loue un espace publicitaire au mois ou à l\'année. Ta publicité apparaît à cet endroit.',
+      searchL: 'Rechercher un pays ou une ville', searchP: 'ex. Japon, Paris',
+      notice: 'Prototype. Aucun paiement n\'est effectué, les prix sont des exemples, les publicités d\'exemple appartiennent à des marques fictives.',
+      lgFree: 'Disponible', lgRent: 'Loué, dans la couleur de la marque', lgSel: 'Sélectionné',
+      rentedH: 'Emplacements loués', zin: 'Zoom avant', zout: 'Zoom arrière', spinOff: 'Arrêter la rotation', spinOn: 'Lancer la rotation',
+      globeAria: 'Globe. Fais glisser pour tourner, touche un pays ou une ville pour le sélectionner.',
+      introK: 'Pour commencer', introH: 'Choisis un emplacement',
+      s1h: 'Choisir un lieu', s1d: 'Touche un pays ou un point de ville sur le globe, ou utilise la recherche.',
+      s2h: 'Définir la durée', s2d: 'Mensuel ou annuel. L\'annuel inclut deux mois offerts.',
+      s3h: 'Préparer ta publicité', s3d: 'Marque, titre, texte, couleur et image. L\'aperçu se met à jour aussitôt.',
+      count: '{c} pays et {y} villes à louer.',
+      country: 'Pays', city: 'Ville', cities: 'Villes de ce pays', toCountry: 'Aller à {n}',
+      free: 'Disponible', taken: 'Loué', review: 'En vérification', liveAd: 'Publicité en ligne', advertiser: 'Annonceur', plan: 'Formule', ends: 'Fin',
+      example: 'Ceci est une publicité d\'exemple. Choisis un autre pays ou une autre ville pour publier la tienne.', endIt: 'Mettre fin à la location',
+      period: 'Durée de location', monthly: 'Mensuel', yearly: 'Annuel', perMonth: 'par mois', perYear: 'par an · 2 mois offerts', duration: 'Durée',
+      yourAd: 'Ta publicité', brand: 'Nom de la marque', headline: 'Titre', text: 'Texte', color: 'Couleur', link: 'Lien (facultatif)', image: 'Image (facultatif)', preview: 'Aperçu',
+      phBrand: 'Nom de la marque', phHead: 'Ton titre apparaît ici', more: 'En savoir plus',
+      rulesT: 'Règles : aucun contenu illégal, trompeur, contrefaisant, haineux ou violent. Chaque publicité est vérifiée avant sa mise en ligne.', rulesOk: 'J\'ai lu et j\'accepte les règles publicitaires.',
+      rentBtn: 'Louer et soumettre', proto: 'Prototype : aucun paiement. La location est conservée uniquement dans ce navigateur.',
+      eReq: 'Le nom de la marque et le titre sont obligatoires.', eLink: 'Le lien doit commencer par http:// ou https://.', eRules: 'Merci d\'accepter les règles publicitaires.', eImg: 'Impossible de lire l\'image. Essaie un autre fichier.',
+      tReview: 'Demande pour {r} reçue. Elle est en vérification.', tEnd: 'Location pour {r} terminée.', tApprove: 'Ta publicité pour {r} est en ligne.',
+      rvNote: 'Ta publicité est en vérification. Elle apparaît sur le globe après validation.', approve: 'Prototype : simuler la validation',
+      contact: 'Contact', copy: 'Copier', copied: 'Copié', noData: 'Ce prototype ne collecte aucune donnée personnelle.',
+      disc: 'Service de location d\'espaces publicitaires. Aucun lien avec un terrain ou un bien réel.', langL: 'Langue',
+      suggest: 'Langue de ce pays : {l}', suggestBtn: 'Afficher le site en {l}', noRent: 'Aucun emplacement loué pour l\'instant.',
+      mapFail: 'Les frontières n\'ont pas pu être chargées. Les villes et la recherche fonctionnent toujours.', storeFull: 'Stockage du navigateur plein. La location n\'est valable que pour cette session.'
+    },
+    es: {
+      lead: 'Gira el globo, elige un país o una ciudad y alquila espacio publicitario por mes o por año. Tu anuncio aparece en ese lugar.',
+      searchL: 'Buscar país o ciudad', searchP: 'p. ej. Japón, Madrid',
+      notice: 'Prototipo. No se cobra ningún pago, los precios son ejemplos y los anuncios de muestra pertenecen a marcas inventadas.',
+      lgFree: 'Disponible', lgRent: 'Alquilado, con el color de la marca', lgSel: 'Seleccionado',
+      rentedH: 'Espacios alquilados', zin: 'Acercar', zout: 'Alejar', spinOff: 'Detener giro', spinOn: 'Iniciar giro',
+      globeAria: 'Globo terráqueo. Arrastra para girar, toca un país o una ciudad para seleccionarlo.',
+      introK: 'Para empezar', introH: 'Elige un lugar',
+      s1h: 'Elige el lugar', s1d: 'Toca un país o un punto de ciudad en el globo, o usa el buscador.',
+      s2h: 'Define el periodo', s2d: 'Mensual o anual. El plan anual incluye dos meses gratis.',
+      s3h: 'Prepara tu anuncio', s3d: 'Marca, titular, texto, color e imagen. La vista previa se actualiza al instante.',
+      count: '{c} países y {y} ciudades para alquilar.',
+      country: 'País', city: 'Ciudad', cities: 'Ciudades de este país', toCountry: 'Ir a {n}',
+      free: 'Disponible', taken: 'Alquilado', review: 'En revisión', liveAd: 'Anuncio activo', advertiser: 'Anunciante', plan: 'Plan', ends: 'Termina',
+      example: 'Este es un anuncio de ejemplo. Elige otro país u otra ciudad para publicar el tuyo.', endIt: 'Terminar alquiler',
+      period: 'Periodo de alquiler', monthly: 'Mensual', yearly: 'Anual', perMonth: 'al mes', perYear: 'al año · 2 meses gratis', duration: 'Duración',
+      yourAd: 'Tu anuncio', brand: 'Nombre de la marca', headline: 'Titular', text: 'Texto', color: 'Color', link: 'Enlace (opcional)', image: 'Imagen (opcional)', preview: 'Vista previa',
+      phBrand: 'Nombre de la marca', phHead: 'Tu titular aparece aquí', more: 'Más información',
+      rulesT: 'Reglas: sin contenido ilegal, engañoso, que infrinja derechos de autor, de odio o violento. Cada anuncio se revisa antes de publicarse.', rulesOk: 'He leído y acepto las reglas de publicidad.',
+      rentBtn: 'Alquilar y enviar', proto: 'Prototipo: no se cobra nada. El alquiler se guarda solo en este navegador.',
+      eReq: 'El nombre de la marca y el titular son obligatorios.', eLink: 'El enlace debe empezar por http:// o https://.', eRules: 'Acepta las reglas de publicidad.', eImg: 'No se pudo leer la imagen. Prueba con otro archivo.',
+      tReview: 'Solicitud para {r} recibida. Está en revisión.', tEnd: 'Alquiler de {r} terminado.', tApprove: 'Tu anuncio de {r} está publicado.',
+      rvNote: 'Tu anuncio está en revisión. Aparece en el globo cuando se apruebe.', approve: 'Prototipo: simular aprobación',
+      contact: 'Contacto', copy: 'Copiar', copied: 'Copiado', noData: 'Este prototipo no recoge datos personales.',
+      disc: 'Servicio de alquiler de espacios publicitarios. Sin relación con terrenos ni inmuebles reales.', langL: 'Idioma',
+      suggest: 'Idioma de este país: {l}', suggestBtn: 'Ver el sitio en {l}', noRent: 'Aún no hay espacios alquilados.',
+      mapFail: 'No se pudieron cargar las fronteras. Los puntos de ciudad y el buscador siguen funcionando.', storeFull: 'El almacenamiento del navegador está lleno. El alquiler solo vale para esta sesión.'
+    },
+    pt: {
+      lead: 'Gire o globo, escolha um país ou uma cidade e alugue espaço publicitário por mês ou por ano. Seu anúncio aparece naquele lugar.',
+      searchL: 'Buscar país ou cidade', searchP: 'ex.: Japão, São Paulo',
+      notice: 'Protótipo. Nenhum pagamento é cobrado, os preços são exemplos e os anúncios de amostra são de marcas fictícias.',
+      lgFree: 'Disponível', lgRent: 'Alugado, na cor da marca', lgSel: 'Selecionado',
+      rentedH: 'Espaços alugados', zin: 'Aproximar', zout: 'Afastar', spinOff: 'Parar rotação', spinOn: 'Iniciar rotação',
+      globeAria: 'Globo. Arraste para girar, toque em um país ou cidade para selecionar.',
+      introK: 'Para começar', introH: 'Escolha um lugar',
+      s1h: 'Escolha o lugar', s1d: 'Toque em um país ou ponto de cidade no globo, ou use a busca.',
+      s2h: 'Defina o período', s2d: 'Mensal ou anual. O anual inclui dois meses grátis.',
+      s3h: 'Prepare seu anúncio', s3d: 'Marca, título, texto, cor e imagem. A prévia atualiza na hora.',
+      count: '{c} países e {y} cidades para alugar.',
+      country: 'País', city: 'Cidade', cities: 'Cidades deste país', toCountry: 'Ir para {n}',
+      free: 'Disponível', taken: 'Alugado', review: 'Em análise', liveAd: 'Anúncio no ar', advertiser: 'Anunciante', plan: 'Plano', ends: 'Termina',
+      example: 'Este é um anúncio de exemplo. Escolha outro país ou cidade para publicar o seu.', endIt: 'Encerrar aluguel',
+      period: 'Período de aluguel', monthly: 'Mensal', yearly: 'Anual', perMonth: 'por mês', perYear: 'por ano · 2 meses grátis', duration: 'Duração',
+      yourAd: 'Seu anúncio', brand: 'Nome da marca', headline: 'Título', text: 'Texto', color: 'Cor', link: 'Link (opcional)', image: 'Imagem (opcional)', preview: 'Prévia',
+      phBrand: 'Nome da marca', phHead: 'Seu título aparece aqui', more: 'Saiba mais',
+      rulesT: 'Regras: sem conteúdo ilegal, enganoso, que viole direitos autorais, de ódio ou violento. Todo anúncio é analisado antes de ir ao ar.', rulesOk: 'Li e aceito as regras de anúncios.',
+      rentBtn: 'Alugar e enviar', proto: 'Protótipo: nenhum pagamento é cobrado. O aluguel fica salvo apenas neste navegador.',
+      eReq: 'Nome da marca e título são obrigatórios.', eLink: 'O link deve começar com http:// ou https://.', eRules: 'Aceite as regras de anúncios.', eImg: 'Não foi possível ler a imagem. Tente outro arquivo.',
+      tReview: 'Pedido para {r} recebido. Está em análise.', tEnd: 'Aluguel de {r} encerrado.', tApprove: 'Seu anúncio em {r} está no ar.',
+      rvNote: 'Seu anúncio está em análise. Ele aparece no globo após a aprovação.', approve: 'Protótipo: simular aprovação',
+      contact: 'Contato', copy: 'Copiar', copied: 'Copiado', noData: 'Este protótipo não coleta dados pessoais.',
+      disc: 'Serviço de aluguel de espaço publicitário. Sem relação com terrenos ou imóveis reais.', langL: 'Idioma',
+      suggest: 'Idioma deste país: {l}', suggestBtn: 'Mostrar o site em {l}', noRent: 'Nenhum espaço alugado ainda.',
+      mapFail: 'Não foi possível carregar as fronteiras. Os pontos de cidade e a busca continuam funcionando.', storeFull: 'Armazenamento do navegador cheio. O aluguel vale só nesta sessão.'
+    },
+    it: {
+      lead: 'Fai girare il globo, scegli un paese o una città e affitta uno spazio pubblicitario al mese o all\'anno. Il tuo annuncio compare in quel punto.',
+      searchL: 'Cerca paese o città', searchP: 'es. Giappone, Roma',
+      notice: 'Prototipo. Nessun pagamento viene effettuato, i prezzi sono esempi e gli annunci dimostrativi appartengono a marchi inventati.',
+      lgFree: 'Disponibile', lgRent: 'Affittato, nel colore del marchio', lgSel: 'Selezionato',
+      rentedH: 'Spazi affittati', zin: 'Ingrandisci', zout: 'Riduci', spinOff: 'Ferma rotazione', spinOn: 'Avvia rotazione',
+      globeAria: 'Globo. Trascina per ruotare, tocca un paese o una città per selezionarlo.',
+      introK: 'Per iniziare', introH: 'Scegli un punto',
+      s1h: 'Scegli il luogo', s1d: 'Tocca un paese o un punto città sul globo, oppure usa la ricerca.',
+      s2h: 'Imposta la durata', s2d: 'Mensile o annuale. Il piano annuale include due mesi gratis.',
+      s3h: 'Prepara il tuo annuncio', s3d: 'Marchio, titolo, testo, colore e immagine. L\'anteprima si aggiorna subito.',
+      count: '{c} paesi e {y} città da affittare.',
+      country: 'Paese', city: 'Città', cities: 'Città di questo paese', toCountry: 'Vai a {n}',
+      free: 'Disponibile', taken: 'Affittato', review: 'In revisione', liveAd: 'Annuncio attivo', advertiser: 'Inserzionista', plan: 'Piano', ends: 'Scade',
+      example: 'Questo è un annuncio di esempio. Scegli un altro paese o un\'altra città per pubblicare il tuo.', endIt: 'Termina l\'affitto',
+      period: 'Durata dell\'affitto', monthly: 'Mensile', yearly: 'Annuale', perMonth: 'al mese', perYear: 'all\'anno · 2 mesi gratis', duration: 'Durata',
+      yourAd: 'Il tuo annuncio', brand: 'Nome del marchio', headline: 'Titolo', text: 'Testo', color: 'Colore', link: 'Link (facoltativo)', image: 'Immagine (facoltativa)', preview: 'Anteprima',
+      phBrand: 'Nome del marchio', phHead: 'Il tuo titolo appare qui', more: 'Scopri di più',
+      rulesT: 'Regole: niente contenuti illegali, ingannevoli, che violino il diritto d\'autore, d\'odio o violenti. Ogni annuncio viene controllato prima della pubblicazione.', rulesOk: 'Ho letto e accetto le regole degli annunci.',
+      rentBtn: 'Affitta e invia', proto: 'Prototipo: nessun pagamento. L\'affitto viene salvato solo in questo browser.',
+      eReq: 'Nome del marchio e titolo sono obbligatori.', eLink: 'Il link deve iniziare con http:// o https://.', eRules: 'Accetta le regole degli annunci.', eImg: 'Impossibile leggere l\'immagine. Prova un altro file.',
+      tReview: 'Richiesta per {r} ricevuta. È in revisione.', tEnd: 'Affitto di {r} terminato.', tApprove: 'Il tuo annuncio per {r} è online.',
+      rvNote: 'Il tuo annuncio è in revisione. Compare sul globo dopo l\'approvazione.', approve: 'Prototipo: simula l\'approvazione',
+      contact: 'Contatti', copy: 'Copia', copied: 'Copiato', noData: 'Questo prototipo non raccoglie dati personali.',
+      disc: 'Servizio di affitto di spazi pubblicitari. Nessun legame con terreni o immobili reali.', langL: 'Lingua',
+      suggest: 'Lingua di questo paese: {l}', suggestBtn: 'Mostra il sito in {l}', noRent: 'Nessuno spazio ancora affittato.',
+      mapFail: 'Non è stato possibile caricare i confini. I punti città e la ricerca funzionano ancora.', storeFull: 'Memoria del browser piena. L\'affitto vale solo per questa sessione.'
+    },
+    ru: {
+      lead: 'Вращайте глобус, выберите страну или город и арендуйте рекламное место на месяц или на год. Ваша реклама появится именно там.',
+      searchL: 'Поиск страны или города', searchP: 'например, Япония, Москва',
+      notice: 'Прототип. Оплата не принимается, цены примерные, примеры рекламы принадлежат вымышленным брендам.',
+      lgFree: 'Свободно', lgRent: 'Арендовано, цветом бренда', lgSel: 'Выбрано',
+      rentedH: 'Арендованные места', zin: 'Приблизить', zout: 'Отдалить', spinOff: 'Остановить вращение', spinOn: 'Запустить вращение',
+      globeAria: 'Глобус. Перетащите, чтобы повернуть, коснитесь страны или города, чтобы выбрать.',
+      introK: 'С чего начать', introH: 'Выберите место',
+      s1h: 'Выберите место', s1d: 'Коснитесь страны или точки города на глобусе или воспользуйтесь поиском.',
+      s2h: 'Задайте срок', s2d: 'Помесячно или на год. При оплате за год два месяца бесплатно.',
+      s3h: 'Подготовьте рекламу', s3d: 'Бренд, заголовок, текст, цвет и изображение. Предпросмотр обновляется сразу.',
+      count: 'Доступно для аренды: стран — {c}, городов — {y}.',
+      country: 'Страна', city: 'Город', cities: 'Города этой страны', toCountry: 'Перейти: {n}',
+      free: 'Свободно', taken: 'Арендовано', review: 'На проверке', liveAd: 'Действующая реклама', advertiser: 'Рекламодатель', plan: 'Тариф', ends: 'До',
+      example: 'Это пример рекламы. Выберите другую страну или город, чтобы разместить свою.', endIt: 'Завершить аренду',
+      period: 'Срок аренды', monthly: 'Помесячно', yearly: 'На год', perMonth: 'в месяц', perYear: 'в год · 2 месяца бесплатно', duration: 'Срок',
+      yourAd: 'Ваша реклама', brand: 'Название бренда', headline: 'Заголовок', text: 'Текст', color: 'Цвет', link: 'Ссылка (необязательно)', image: 'Изображение (необязательно)', preview: 'Предпросмотр',
+      phBrand: 'Название бренда', phHead: 'Здесь появится ваш заголовок', more: 'Подробнее',
+      rulesT: 'Правила: запрещён незаконный, вводящий в заблуждение, нарушающий авторские права, враждебный или жестокий контент. Каждая реклама проверяется перед публикацией.', rulesOk: 'Я прочитал(а) правила рекламы и принимаю их.',
+      rentBtn: 'Арендовать и отправить', proto: 'Прототип: оплата не принимается. Аренда хранится только в этом браузере.',
+      eReq: 'Название бренда и заголовок обязательны.', eLink: 'Ссылка должна начинаться с http:// или https://.', eRules: 'Примите правила рекламы.', eImg: 'Не удалось прочитать изображение. Попробуйте другой файл.',
+      tReview: 'Заявка на «{r}» получена. Она на проверке.', tEnd: 'Аренда «{r}» завершена.', tApprove: 'Ваша реклама в «{r}» опубликована.',
+      rvNote: 'Ваша реклама на проверке. После одобрения она появится на глобусе.', approve: 'Прототип: имитировать одобрение',
+      contact: 'Контакты', copy: 'Копировать', copied: 'Скопировано', noData: 'Этот прототип не собирает персональные данные.',
+      disc: 'Сервис аренды рекламных мест. Не связан с реальными земельными участками или недвижимостью.', langL: 'Язык',
+      suggest: 'Язык этой страны: {l}', suggestBtn: 'Показать сайт: {l}', noRent: 'Пока нет арендованных мест.',
+      mapFail: 'Не удалось загрузить границы стран. Точки городов и поиск работают.', storeFull: 'Память браузера заполнена. Аренда действует только в этой сессии.'
+    },
+    ar: {
+      lead: 'أدر الكرة الأرضية، واختر دولة أو مدينة، واستأجر مساحة إعلانية شهريًا أو سنويًا. سيظهر إعلانك في ذلك الموقع.',
+      searchL: 'ابحث عن دولة أو مدينة', searchP: 'مثال: اليابان، دبي',
+      notice: 'نموذج أولي. لا يتم تحصيل أي مبلغ، والأسعار أمثلة، والإعلانات التجريبية لعلامات تجارية وهمية.',
+      lgFree: 'متاح', lgRent: 'مؤجَّر، بلون العلامة', lgSel: 'محدد',
+      rentedH: 'المساحات المؤجّرة', zin: 'تكبير', zout: 'تصغير', spinOff: 'إيقاف الدوران', spinOn: 'بدء الدوران',
+      globeAria: 'كرة أرضية. اسحب للتدوير، واضغط على دولة أو مدينة لتحديدها.',
+      introK: 'للبدء', introH: 'اختر موقعًا',
+      s1h: 'اختر الموقع', s1d: 'اضغط على دولة أو نقطة مدينة على الكرة، أو استخدم البحث.',
+      s2h: 'حدد المدة', s2d: 'شهريًا أو سنويًا. الخطة السنوية تتضمن شهرين مجانًا.',
+      s3h: 'جهّز إعلانك', s3d: 'العلامة والعنوان والنص واللون والصورة. تتحدث المعاينة فورًا.',
+      count: '{c} دولة و{y} مدينة متاحة للإيجار.',
+      country: 'دولة', city: 'مدينة', cities: 'مدن هذه الدولة', toCountry: 'الانتقال إلى {n}',
+      free: 'متاح', taken: 'مؤجَّر', review: 'قيد المراجعة', liveAd: 'الإعلان الحالي', advertiser: 'المعلن', plan: 'الخطة', ends: 'ينتهي',
+      example: 'هذا إعلان تجريبي. اختر دولة أو مدينة أخرى لنشر إعلانك.', endIt: 'إنهاء الإيجار',
+      period: 'مدة الإيجار', monthly: 'شهري', yearly: 'سنوي', perMonth: 'شهريًا', perYear: 'سنويًا · شهران مجانًا', duration: 'المدة',
+      yourAd: 'إعلانك', brand: 'اسم العلامة', headline: 'العنوان', text: 'النص', color: 'اللون', link: 'رابط (اختياري)', image: 'صورة (اختياري)', preview: 'معاينة',
+      phBrand: 'اسم العلامة', phHead: 'يظهر عنوانك هنا', more: 'اعرف المزيد',
+      rulesT: 'القواعد: يُمنع المحتوى غير القانوني أو المضلل أو المخالف لحقوق النشر أو المحرّض على الكراهية أو العنف. تتم مراجعة كل إعلان قبل نشره.', rulesOk: 'قرأت قواعد الإعلانات وأوافق عليها.',
+      rentBtn: 'استأجر وأرسل', proto: 'نموذج أولي: لا يتم الدفع. يُحفظ الإيجار في هذا المتصفح فقط.',
+      eReq: 'اسم العلامة والعنوان مطلوبان.', eLink: 'يجب أن يبدأ الرابط بـ http:// أو https://.', eRules: 'يرجى قبول قواعد الإعلانات.', eImg: 'تعذّرت قراءة الصورة. جرّب ملفًا آخر.',
+      tReview: 'تم استلام طلب {r}. وهو قيد المراجعة.', tEnd: 'انتهى إيجار {r}.', tApprove: 'إعلانك في {r} منشور الآن.',
+      rvNote: 'إعلانك قيد المراجعة. سيظهر على الكرة بعد الموافقة.', approve: 'نموذج أولي: محاكاة الموافقة',
+      contact: 'التواصل', copy: 'نسخ', copied: 'تم النسخ', noData: 'هذا النموذج الأولي لا يجمع أي بيانات شخصية.',
+      disc: 'خدمة تأجير مساحات إعلانية. لا علاقة لها بأراضٍ أو عقارات حقيقية.', langL: 'اللغة',
+      suggest: 'لغة هذه الدولة: {l}', suggestBtn: 'عرض الموقع بـ{l}', noRent: 'لا توجد مساحات مؤجّرة بعد.',
+      mapFail: 'تعذّر تحميل حدود الدول. نقاط المدن والبحث تعمل.', storeFull: 'ذاكرة المتصفح ممتلئة. الإيجار صالح لهذه الجلسة فقط.'
+    },
+    zh: {
+      lead: '转动地球，选择国家或城市，按月或按年租用广告位。你的广告会出现在那个位置。',
+      searchL: '搜索国家或城市', searchP: '例如：日本、上海',
+      notice: '原型演示。不会收取任何付款，价格仅为示例，示例广告属于虚构品牌。',
+      lgFree: '可租用', lgRent: '已租出，显示品牌颜色', lgSel: '已选中',
+      rentedH: '已租出的广告位', zin: '放大', zout: '缩小', spinOff: '停止旋转', spinOn: '开始旋转',
+      globeAria: '地球。拖动可旋转，点击国家或城市即可选中。',
+      introK: '开始使用', introH: '选择一个位置',
+      s1h: '选择位置', s1d: '点击地球上的国家或城市圆点，也可以使用搜索框。',
+      s2h: '设定租期', s2d: '按月或按年。按年租用赠送两个月。',
+      s3h: '准备广告', s3d: '品牌、标题、文字、颜色和图片。预览会即时更新。',
+      count: '共有 {c} 个国家和 {y} 个城市可租用。',
+      country: '国家', city: '城市', cities: '该国家的城市', toCountry: '前往{n}',
+      free: '可租用', taken: '已租出', review: '审核中', liveAd: '当前广告', advertiser: '广告主', plan: '套餐', ends: '到期',
+      example: '这是示例广告。选择其他国家或城市来发布你自己的广告。', endIt: '结束租用',
+      period: '租用时长', monthly: '按月', yearly: '按年', perMonth: '每月', perYear: '每年 · 赠送 2 个月', duration: '时长',
+      yourAd: '你的广告', brand: '品牌名称', headline: '标题', text: '文字', color: '颜色', link: '链接（可选）', image: '图片（可选）', preview: '预览',
+      phBrand: '品牌名称', phHead: '你的标题会显示在这里', more: '了解更多',
+      rulesT: '广告规则：禁止违法、误导、侵犯版权、仇恨或暴力内容。每条广告上线前都会经过审核。', rulesOk: '我已阅读并接受广告规则。',
+      rentBtn: '租用并提交', proto: '原型演示：不收取付款。租用记录仅保存在此浏览器中。',
+      eReq: '品牌名称和标题为必填项。', eLink: '链接必须以 http:// 或 https:// 开头。', eRules: '请接受广告规则。', eImg: '无法读取图片，请换一个文件。',
+      tReview: '已收到{r}的申请，正在审核。', tEnd: '{r}的租用已结束。', tApprove: '你在{r}的广告已上线。',
+      rvNote: '你的广告正在审核，通过后会显示在地球上。', approve: '原型演示：模拟审核通过',
+      contact: '联系方式', copy: '复制', copied: '已复制', noData: '此原型不收集任何个人数据。',
+      disc: '广告位租用服务，与真实土地或房产无关。', langL: '语言',
+      suggest: '该国家的语言：{l}', suggestBtn: '用{l}显示网站', noRent: '暂无已租出的广告位。',
+      mapFail: '无法加载国家边界。城市圆点和搜索仍可使用。', storeFull: '浏览器存储已满，租用仅在本次会话有效。'
+    },
+    ja: {
+      lead: '地球儀を回して国や都市を選び、月単位または年単位で広告枠を借りましょう。広告はその場所に表示されます。',
+      searchL: '国または都市を検索', searchP: '例：日本、東京',
+      notice: 'プロトタイプです。支払いは発生せず、料金は例示、サンプル広告は架空のブランドのものです。',
+      lgFree: '空き', lgRent: '貸出中（ブランドカラー）', lgSel: '選択中',
+      rentedH: '貸出中の枠', zin: '拡大', zout: '縮小', spinOff: '回転を止める', spinOn: '回転を始める',
+      globeAria: '地球儀。ドラッグで回転、国や都市をタップで選択します。',
+      introK: 'はじめに', introH: '場所を選ぶ',
+      s1h: '場所を選ぶ', s1d: '地球儀上の国や都市の点をタップするか、検索を使います。',
+      s2h: '期間を決める', s2d: '月払いまたは年払い。年払いは2か月分無料です。',
+      s3h: '広告を作る', s3d: 'ブランド、見出し、本文、色、画像。プレビューはすぐに更新されます。',
+      count: '{c}か国・{y}都市が借りられます。',
+      country: '国', city: '都市', cities: 'この国の都市', toCountry: '{n}へ移動',
+      free: '空き', taken: '貸出中', review: '審査中', liveAd: '掲載中の広告', advertiser: '広告主', plan: 'プラン', ends: '終了日',
+      example: 'これはサンプル広告です。ほかの国や都市を選んで自分の広告を掲載できます。', endIt: '貸出を終了',
+      period: '借りる期間', monthly: '月払い', yearly: '年払い', perMonth: '月額', perYear: '年額・2か月分無料', duration: '期間',
+      yourAd: 'あなたの広告', brand: 'ブランド名', headline: '見出し', text: '本文', color: '色', link: 'リンク（任意）', image: '画像（任意）', preview: 'プレビュー',
+      phBrand: 'ブランド名', phHead: 'ここに見出しが表示されます', more: '詳しく見る',
+      rulesT: '広告ルール：違法、誤解を招く、著作権を侵害する、憎悪や暴力を含む内容は禁止です。すべての広告は公開前に審査されます。', rulesOk: '広告ルールを読み、同意します。',
+      rentBtn: '借りて申請する', proto: 'プロトタイプ：支払いは発生しません。貸出情報はこのブラウザにのみ保存されます。',
+      eReq: 'ブランド名と見出しは必須です。', eLink: 'リンクは http:// または https:// で始めてください。', eRules: '広告ルールに同意してください。', eImg: '画像を読み込めませんでした。別のファイルをお試しください。',
+      tReview: '{r}の申請を受け付けました。審査中です。', tEnd: '{r}の貸出を終了しました。', tApprove: '{r}の広告が掲載されました。',
+      rvNote: '広告は審査中です。承認されると地球儀に表示されます。', approve: 'プロトタイプ：承認を再現',
+      contact: 'お問い合わせ', copy: 'コピー', copied: 'コピーしました', noData: 'このプロトタイプは個人情報を収集しません。',
+      disc: '広告枠の貸出サービスです。実際の土地や不動産とは関係ありません。', langL: '言語',
+      suggest: 'この国の言語：{l}', suggestBtn: 'サイトを{l}で表示', noRent: '貸出中の枠はまだありません。',
+      mapFail: '国境データを読み込めませんでした。都市の点と検索は使えます。', storeFull: 'ブラウザの保存容量がいっぱいです。貸出はこのセッションのみ有効です。'
+    },
+    ko: {
+      lead: '지구본을 돌려 국가나 도시를 고르고, 월 또는 연 단위로 광고 자리를 임대하세요. 광고가 그 위치에 표시됩니다.',
+      searchL: '국가 또는 도시 검색', searchP: '예: 일본, 서울',
+      notice: '프로토타입입니다. 결제는 이루어지지 않으며, 가격은 예시이고 샘플 광고는 가상의 브랜드입니다.',
+      lgFree: '이용 가능', lgRent: '임대 중, 브랜드 색상', lgSel: '선택됨',
+      rentedH: '임대 중인 자리', zin: '확대', zout: '축소', spinOff: '회전 멈춤', spinOn: '회전 시작',
+      globeAria: '지구본. 드래그해서 회전하고, 국가나 도시를 눌러 선택하세요.',
+      introK: '시작하기', introH: '위치를 선택하세요',
+      s1h: '위치 선택', s1d: '지구본의 국가나 도시 점을 누르거나 검색을 사용하세요.',
+      s2h: '기간 설정', s2d: '월 또는 연 단위. 연 결제는 2개월 무료입니다.',
+      s3h: '광고 준비', s3d: '브랜드, 제목, 문구, 색상, 이미지. 미리보기가 바로 갱신됩니다.',
+      count: '{c}개 국가와 {y}개 도시를 임대할 수 있습니다.',
+      country: '국가', city: '도시', cities: '이 국가의 도시', toCountry: '{n}(으)로 이동',
+      free: '이용 가능', taken: '임대 중', review: '심사 중', liveAd: '게재 중인 광고', advertiser: '광고주', plan: '요금제', ends: '종료',
+      example: '샘플 광고입니다. 다른 국가나 도시를 선택해 내 광고를 게재하세요.', endIt: '임대 종료',
+      period: '임대 기간', monthly: '월간', yearly: '연간', perMonth: '월', perYear: '연 · 2개월 무료', duration: '기간',
+      yourAd: '내 광고', brand: '브랜드 이름', headline: '제목', text: '문구', color: '색상', link: '링크 (선택)', image: '이미지 (선택)', preview: '미리보기',
+      phBrand: '브랜드 이름', phHead: '여기에 제목이 표시됩니다', more: '자세히 보기',
+      rulesT: '광고 규칙: 불법, 오해를 부르는, 저작권을 침해하는, 혐오 또는 폭력적인 콘텐츠는 금지됩니다. 모든 광고는 게재 전에 심사합니다.', rulesOk: '광고 규칙을 읽고 동의합니다.',
+      rentBtn: '임대하고 제출', proto: '프로토타입: 결제되지 않습니다. 임대 정보는 이 브라우저에만 저장됩니다.',
+      eReq: '브랜드 이름과 제목은 필수입니다.', eLink: '링크는 http:// 또는 https://로 시작해야 합니다.', eRules: '광고 규칙에 동의해 주세요.', eImg: '이미지를 읽을 수 없습니다. 다른 파일을 사용해 보세요.',
+      tReview: '{r} 신청이 접수되었습니다. 심사 중입니다.', tEnd: '{r} 임대가 종료되었습니다.', tApprove: '{r}의 광고가 게재되었습니다.',
+      rvNote: '광고를 심사 중입니다. 승인되면 지구본에 표시됩니다.', approve: '프로토타입: 승인 시뮬레이션',
+      contact: '문의', copy: '복사', copied: '복사됨', noData: '이 프로토타입은 개인정보를 수집하지 않습니다.',
+      disc: '광고 자리 임대 서비스입니다. 실제 토지나 부동산과 관련이 없습니다.', langL: '언어',
+      suggest: '이 국가의 언어: {l}', suggestBtn: '사이트를 {l}(으)로 보기', noRent: '아직 임대된 자리가 없습니다.',
+      mapFail: '국경 데이터를 불러오지 못했습니다. 도시 점과 검색은 계속 사용할 수 있습니다.', storeFull: '브라우저 저장 공간이 가득 찼습니다. 임대는 이번 세션에서만 유효합니다.'
+    }
+  };
+
+  /* Açılış sayfası, şartlar ve hatırlatma metinleri */
+  var I18N2 = {
+    tr: {
+      navTerms: 'Şartlar ve planlar', heroCta: 'Planları ve şartları gör', howH: 'Nasıl çalışır', plansH: 'Ödeme planları',
+      plansD: 'Fiyatlar ülkenin gelişmişlik düzeyine göre belirlenir. Aylık öde ya da bir yıllık öde, iki ay ücretsiz.',
+      colEx: 'Örnek ülkeler', cityNote: 'Şehir alanları, bağlı olduğu ülkenin fiyatının %60\'ıdır.',
+      termsH: 'Haklar ve kullanım şartları',
+      c1h: 'Yalnızca reklam', c1d: 'Globeboard reklam alanı kiralar. Kiralama, o alanda kiralama süresince reklamını gösterme hakkı verir, başka bir hak vermez.',
+      c2h: 'Mülkiyet hakkı yok', c2d: 'Hiçbir mülkiyet hakkı doğmaz. Alanlar sanaldır, gerçek arsa ya da gayrimenkulle ilgisi yoktur; satılamaz, devredilemez ve yatırım aracı olarak kullanılamaz.',
+      c3h: 'Alanı kullanma şekli', c3d: 'Her alanda tek reklam yayınlanır. Reklam, reklam kurallarına uymalı ve yayından önce incelenir. Kuralları ya da yasaları ihlal eden reklamlar kaldırılabilir.',
+      c4h: 'Ödeme ve yenileme', c4d: 'Aylık ya da yıllık seçebilirsin. Kiralama kendiliğinden yenilenmez. Aylık kiralamada bitişten beş gün, yıllık kiralamada bir ay önce e-posta ile uyarılırsın.',
+      c5h: 'Verilerin', c5d: 'Yalnızca bir e-posta adresi isteriz, o da sadece kiralama bitmeden önce hatırlatma göndermek için.',
+      draftNote: 'Prototip için taslak metindir. Gerçek yayından önce gözden geçirtmelisin.',
+      accept1: 'Hiçbir mülkiyet hakkı doğmadığını ve Globeboard\'un yalnızca reklam amaçlı olduğunu anlıyorum.',
+      accept2: 'Kullanım şartlarını, kullanım kurallarını ve ödeme planlarını okudum, kabul ediyorum.',
+      goBtn: 'Küreye devam et', eAccept: 'Devam etmek için iki kutuyu da işaretle.',
+      emailL: 'E-postan (kiralama bitiş hatırlatması için)', eMail: 'Geçerli bir e-posta adresi gir.', remindL: 'Hatırlatma e-postası',
+      noData: 'Bu prototip e-postanı yalnızca bu tarayıcıda saklar, sunucuya hiçbir şey göndermez.'
+    },
+    en: {
+      navTerms: 'Terms and plans', heroCta: 'See plans and terms', howH: 'How it works', plansH: 'Payment plans',
+      plansD: 'Prices follow each country\'s level of development. Pay monthly, or pay for a year and get two months free.',
+      colEx: 'Example countries', cityNote: 'City spots cost 60% of their country\'s price.',
+      termsH: 'Rights and terms of use',
+      c1h: 'Advertising only', c1d: 'Globeboard rents advertising space. A rental gives you the right to show your ad on that spot for the rental period and nothing more.',
+      c2h: 'No ownership', c2d: 'No ownership right of any kind arises. Spots are virtual, have no connection to real land or property, and cannot be sold, transferred or used as an investment.',
+      c3h: 'How to use your spot', c3d: 'One ad per spot. Your ad must follow the ad rules and is reviewed before it goes live. Ads that break the rules or the law can be removed.',
+      c4h: 'Payment and renewal', c4d: 'Choose monthly or yearly. Rentals do not renew by themselves. You get an email five days before a monthly rental ends and one month before a yearly rental ends.',
+      c5h: 'Your data', c5d: 'We only ask for an email address, and only to send you the end-of-rental reminder.',
+      draftNote: 'Draft text for the prototype. Have it reviewed before the real launch.',
+      accept1: 'I understand that no ownership right arises and that Globeboard is for advertising only.',
+      accept2: 'I have read and accept the terms of use, the usage rules and the payment plans.',
+      goBtn: 'Continue to the globe', eAccept: 'Please tick both boxes to continue.',
+      emailL: 'Your email (for the end-of-rental reminder)', eMail: 'Enter a valid email address.', remindL: 'Reminder email',
+      noData: 'This prototype keeps your email only in this browser and sends nothing to a server.'
+    },
+    de: {
+      navTerms: 'Bedingungen und Tarife', heroCta: 'Tarife und Bedingungen ansehen', howH: 'So funktioniert es', plansH: 'Zahlungspläne',
+      plansD: 'Die Preise richten sich nach dem Entwicklungsstand des Landes. Monatlich zahlen oder ein Jahr zahlen und zwei Monate sparen.',
+      colEx: 'Beispielländer', cityNote: 'Stadtflächen kosten 60 % des Preises ihres Landes.',
+      termsH: 'Rechte und Nutzungsbedingungen',
+      c1h: 'Nur Werbung', c1d: 'Globeboard vermietet Werbefläche. Die Miete gibt dir das Recht, deine Anzeige für die Mietdauer auf dieser Fläche zu zeigen, nicht mehr.',
+      c2h: 'Kein Eigentum', c2d: 'Es entsteht keinerlei Eigentumsrecht. Die Flächen sind virtuell, haben keinen Bezug zu echtem Land oder Immobilien und können nicht verkauft, übertragen oder als Geldanlage genutzt werden.',
+      c3h: 'Nutzung der Fläche', c3d: 'Pro Fläche eine Anzeige. Sie muss die Anzeigenregeln einhalten und wird vor der Veröffentlichung geprüft. Anzeigen, die gegen Regeln oder Gesetze verstoßen, können entfernt werden.',
+      c4h: 'Zahlung und Verlängerung', c4d: 'Monatlich oder jährlich wählbar. Mieten verlängern sich nicht automatisch. Du erhältst eine E-Mail fünf Tage vor Ende einer Monatsmiete und einen Monat vor Ende einer Jahresmiete.',
+      c5h: 'Deine Daten', c5d: 'Wir fragen nur nach einer E-Mail-Adresse, und zwar nur für die Erinnerung vor Ende der Miete.',
+      draftNote: 'Entwurfstext für den Prototyp. Lass ihn vor dem echten Start prüfen.',
+      accept1: 'Ich verstehe, dass kein Eigentumsrecht entsteht und Globeboard ausschließlich der Werbung dient.',
+      accept2: 'Ich habe die Nutzungsbedingungen, die Nutzungsregeln und die Zahlungspläne gelesen und akzeptiere sie.',
+      goBtn: 'Weiter zum Globus', eAccept: 'Bitte hake beide Kästchen an, um fortzufahren.',
+      emailL: 'Deine E-Mail (für die Erinnerung vor Mietende)', eMail: 'Gib eine gültige E-Mail-Adresse ein.', remindL: 'Erinnerungs-E-Mail',
+      noData: 'Dieser Prototyp speichert deine E-Mail nur in diesem Browser und sendet nichts an einen Server.'
+    },
+    fr: {
+      navTerms: 'Conditions et tarifs', heroCta: 'Voir les tarifs et conditions', howH: 'Comment ça marche', plansH: 'Plans de paiement',
+      plansD: 'Les prix suivent le niveau de développement de chaque pays. Paie au mois, ou paie un an et obtiens deux mois offerts.',
+      colEx: 'Exemples de pays', cityNote: 'Les emplacements de ville coûtent 60 % du prix de leur pays.',
+      termsH: 'Droits et conditions d\'utilisation',
+      c1h: 'Publicité uniquement', c1d: 'Globeboard loue des espaces publicitaires. La location te donne le droit d\'afficher ta publicité à cet emplacement pendant la durée louée, rien de plus.',
+      c2h: 'Aucun droit de propriété', c2d: 'Aucun droit de propriété n\'est créé. Les emplacements sont virtuels, sans lien avec un terrain ou un bien réel, et ne peuvent être ni vendus, ni cédés, ni utilisés comme investissement.',
+      c3h: 'Utilisation de l\'emplacement', c3d: 'Une seule publicité par emplacement. Elle doit respecter les règles publicitaires et est vérifiée avant sa mise en ligne. Les publicités contraires aux règles ou à la loi peuvent être retirées.',
+      c4h: 'Paiement et renouvellement', c4d: 'Au mois ou à l\'année. Les locations ne se renouvellent pas automatiquement. Tu reçois un e-mail cinq jours avant la fin d\'une location mensuelle et un mois avant la fin d\'une location annuelle.',
+      c5h: 'Tes données', c5d: 'Nous demandons seulement une adresse e-mail, uniquement pour t\'envoyer le rappel de fin de location.',
+      draftNote: 'Texte provisoire pour le prototype. Fais-le relire avant le vrai lancement.',
+      accept1: 'Je comprends qu\'aucun droit de propriété n\'est créé et que Globeboard sert uniquement à la publicité.',
+      accept2: 'J\'ai lu et j\'accepte les conditions d\'utilisation, les règles d\'usage et les plans de paiement.',
+      goBtn: 'Continuer vers le globe', eAccept: 'Coche les deux cases pour continuer.',
+      emailL: 'Ton e-mail (pour le rappel de fin de location)', eMail: 'Saisis une adresse e-mail valide.', remindL: 'E-mail de rappel',
+      noData: 'Ce prototype garde ton e-mail uniquement dans ce navigateur et n\'envoie rien à un serveur.'
+    },
+    es: {
+      navTerms: 'Condiciones y planes', heroCta: 'Ver planes y condiciones', howH: 'Cómo funciona', plansH: 'Planes de pago',
+      plansD: 'Los precios siguen el nivel de desarrollo de cada país. Paga por mes, o paga un año y obtén dos meses gratis.',
+      colEx: 'Países de ejemplo', cityNote: 'Los espacios de ciudad cuestan el 60 % del precio de su país.',
+      termsH: 'Derechos y condiciones de uso',
+      c1h: 'Solo publicidad', c1d: 'Globeboard alquila espacio publicitario. El alquiler te da derecho a mostrar tu anuncio en ese lugar durante el periodo alquilado, nada más.',
+      c2h: 'Sin derechos de propiedad', c2d: 'No surge ningún derecho de propiedad. Los espacios son virtuales, no tienen relación con terrenos ni inmuebles reales y no pueden venderse, transferirse ni usarse como inversión.',
+      c3h: 'Uso del espacio', c3d: 'Un anuncio por espacio. Debe cumplir las reglas de publicidad y se revisa antes de publicarse. Los anuncios que incumplan las reglas o la ley pueden retirarse.',
+      c4h: 'Pago y renovación', c4d: 'Elige mensual o anual. Los alquileres no se renuevan solos. Recibes un correo cinco días antes de que termine un alquiler mensual y un mes antes de que termine uno anual.',
+      c5h: 'Tus datos', c5d: 'Solo pedimos una dirección de correo, y únicamente para enviarte el aviso antes de que termine el alquiler.',
+      draftNote: 'Texto provisional del prototipo. Haz que lo revisen antes del lanzamiento real.',
+      accept1: 'Entiendo que no surge ningún derecho de propiedad y que Globeboard es solo para publicidad.',
+      accept2: 'He leído y acepto las condiciones de uso, las reglas de uso y los planes de pago.',
+      goBtn: 'Continuar al globo', eAccept: 'Marca las dos casillas para continuar.',
+      emailL: 'Tu correo (para el aviso de fin de alquiler)', eMail: 'Introduce un correo válido.', remindL: 'Correo de aviso',
+      noData: 'Este prototipo guarda tu correo solo en este navegador y no envía nada a un servidor.'
+    },
+    pt: {
+      navTerms: 'Termos e planos', heroCta: 'Ver planos e termos', howH: 'Como funciona', plansH: 'Planos de pagamento',
+      plansD: 'Os preços seguem o nível de desenvolvimento de cada país. Pague por mês, ou pague um ano e ganhe dois meses grátis.',
+      colEx: 'Países de exemplo', cityNote: 'Espaços de cidade custam 60% do preço do país.',
+      termsH: 'Direitos e termos de uso',
+      c1h: 'Somente publicidade', c1d: 'A Globeboard aluga espaço publicitário. O aluguel dá o direito de exibir seu anúncio naquele local durante o período alugado, nada além disso.',
+      c2h: 'Sem direito de propriedade', c2d: 'Nenhum direito de propriedade é criado. Os espaços são virtuais, sem relação com terrenos ou imóveis reais, e não podem ser vendidos, transferidos nem usados como investimento.',
+      c3h: 'Uso do espaço', c3d: 'Um anúncio por espaço. Ele deve seguir as regras de anúncios e é analisado antes de ir ao ar. Anúncios que violem as regras ou a lei podem ser removidos.',
+      c4h: 'Pagamento e renovação', c4d: 'Escolha mensal ou anual. Os aluguéis não renovam sozinhos. Você recebe um e-mail cinco dias antes do fim de um aluguel mensal e um mês antes do fim de um anual.',
+      c5h: 'Seus dados', c5d: 'Pedimos apenas um e-mail, e somente para enviar o lembrete antes do fim do aluguel.',
+      draftNote: 'Texto provisório do protótipo. Peça uma revisão antes do lançamento real.',
+      accept1: 'Entendo que nenhum direito de propriedade é criado e que a Globeboard é apenas para publicidade.',
+      accept2: 'Li e aceito os termos de uso, as regras de uso e os planos de pagamento.',
+      goBtn: 'Continuar para o globo', eAccept: 'Marque as duas caixas para continuar.',
+      emailL: 'Seu e-mail (para o lembrete de fim do aluguel)', eMail: 'Digite um e-mail válido.', remindL: 'E-mail de lembrete',
+      noData: 'Este protótipo guarda seu e-mail apenas neste navegador e não envia nada a um servidor.'
+    },
+    it: {
+      navTerms: 'Termini e piani', heroCta: 'Vedi piani e termini', howH: 'Come funziona', plansH: 'Piani di pagamento',
+      plansD: 'I prezzi seguono il livello di sviluppo di ogni paese. Paga al mese, oppure paga un anno e ottieni due mesi gratis.',
+      colEx: 'Paesi di esempio', cityNote: 'Gli spazi città costano il 60% del prezzo del loro paese.',
+      termsH: 'Diritti e condizioni d\'uso',
+      c1h: 'Solo pubblicità', c1d: 'Globeboard affitta spazi pubblicitari. L\'affitto ti dà il diritto di mostrare il tuo annuncio in quel punto per la durata dell\'affitto, nulla di più.',
+      c2h: 'Nessun diritto di proprietà', c2d: 'Non nasce alcun diritto di proprietà. Gli spazi sono virtuali, senza legame con terreni o immobili reali, e non possono essere venduti, ceduti o usati come investimento.',
+      c3h: 'Uso dello spazio', c3d: 'Un annuncio per spazio. Deve rispettare le regole degli annunci e viene controllato prima della pubblicazione. Gli annunci che violano le regole o la legge possono essere rimossi.',
+      c4h: 'Pagamento e rinnovo', c4d: 'Scegli mensile o annuale. Gli affitti non si rinnovano da soli. Ricevi un\'e-mail cinque giorni prima della fine di un affitto mensile e un mese prima della fine di uno annuale.',
+      c5h: 'I tuoi dati', c5d: 'Chiediamo solo un indirizzo e-mail, e solo per inviarti il promemoria prima della fine dell\'affitto.',
+      draftNote: 'Testo provvisorio per il prototipo. Fallo rivedere prima del lancio vero e proprio.',
+      accept1: 'Capisco che non nasce alcun diritto di proprietà e che Globeboard serve solo per la pubblicità.',
+      accept2: 'Ho letto e accetto i termini d\'uso, le regole d\'uso e i piani di pagamento.',
+      goBtn: 'Continua al globo', eAccept: 'Spunta entrambe le caselle per continuare.',
+      emailL: 'La tua e-mail (per il promemoria di fine affitto)', eMail: 'Inserisci un\'e-mail valida.', remindL: 'E-mail di promemoria',
+      noData: 'Questo prototipo conserva la tua e-mail solo in questo browser e non invia nulla a un server.'
+    },
+    ru: {
+      navTerms: 'Условия и тарифы', heroCta: 'Смотреть тарифы и условия', howH: 'Как это работает', plansH: 'Тарифы оплаты',
+      plansD: 'Цены зависят от уровня развития страны. Платите помесячно или за год и получите два месяца бесплатно.',
+      colEx: 'Примеры стран', cityNote: 'Места в городах стоят 60% от цены их страны.',
+      termsH: 'Права и условия использования',
+      c1h: 'Только реклама', c1d: 'Globeboard сдаёт в аренду рекламные места. Аренда даёт право показывать вашу рекламу на этом месте в течение срока аренды и ничего больше.',
+      c2h: 'Права собственности нет', c2d: 'Никаких прав собственности не возникает. Места виртуальные, не связаны с реальными земельными участками или недвижимостью и не могут продаваться, передаваться или использоваться как инвестиция.',
+      c3h: 'Использование места', c3d: 'Одно место — одна реклама. Она должна соответствовать правилам рекламы и проверяется перед публикацией. Реклама, нарушающая правила или закон, может быть удалена.',
+      c4h: 'Оплата и продление', c4d: 'Выберите помесячно или на год. Аренда не продлевается сама. Вы получите письмо за пять дней до конца месячной аренды и за месяц до конца годовой.',
+      c5h: 'Ваши данные', c5d: 'Мы запрашиваем только адрес электронной почты, и только чтобы отправить напоминание перед окончанием аренды.',
+      draftNote: 'Черновой текст для прототипа. Проверьте его перед настоящим запуском.',
+      accept1: 'Я понимаю, что права собственности не возникает и что Globeboard предназначен только для рекламы.',
+      accept2: 'Я прочитал(а) и принимаю условия использования, правила использования и тарифы оплаты.',
+      goBtn: 'Перейти к глобусу', eAccept: 'Отметьте оба пункта, чтобы продолжить.',
+      emailL: 'Ваша почта (для напоминания об окончании аренды)', eMail: 'Введите корректный адрес электронной почты.', remindL: 'Письмо-напоминание',
+      noData: 'Этот прототип хранит вашу почту только в этом браузере и ничего не отправляет на сервер.'
+    },
+    ar: {
+      navTerms: 'الشروط والخطط', heroCta: 'عرض الخطط والشروط', howH: 'كيف يعمل', plansH: 'خطط الدفع',
+      plansD: 'تتبع الأسعار مستوى تطور كل دولة. ادفع شهريًا، أو ادفع لسنة كاملة واحصل على شهرين مجانًا.',
+      colEx: 'أمثلة على الدول', cityNote: 'تكلفة مساحات المدن 60% من سعر دولتها.',
+      termsH: 'الحقوق وشروط الاستخدام',
+      c1h: 'للإعلان فقط', c1d: 'تؤجّر Globeboard مساحات إعلانية. يمنحك الإيجار حق عرض إعلانك في ذلك الموقع خلال مدة الإيجار فقط، ولا شيء غير ذلك.',
+      c2h: 'لا حقوق ملكية', c2d: 'لا ينشأ أي حق ملكية. المساحات افتراضية ولا علاقة لها بأراضٍ أو عقارات حقيقية، ولا يمكن بيعها أو نقلها أو استخدامها كاستثمار.',
+      c3h: 'استخدام المساحة', c3d: 'إعلان واحد لكل مساحة. يجب أن يلتزم بقواعد الإعلانات وتتم مراجعته قبل النشر. يمكن حذف الإعلانات المخالفة للقواعد أو القانون.',
+      c4h: 'الدفع والتجديد', c4d: 'اختر شهريًا أو سنويًا. لا يتجدد الإيجار تلقائيًا. تصلك رسالة بريد قبل خمسة أيام من انتهاء الإيجار الشهري، وقبل شهر من انتهاء الإيجار السنوي.',
+      c5h: 'بياناتك', c5d: 'نطلب عنوان بريد إلكتروني فقط، وللغرض الوحيد وهو إرسال تذكير قبل انتهاء الإيجار.',
+      draftNote: 'نص مسودة للنموذج الأولي. يجب مراجعته قبل الإطلاق الفعلي.',
+      accept1: 'أفهم أنه لا ينشأ أي حق ملكية وأن Globeboard مخصصة للإعلان فقط.',
+      accept2: 'قرأت شروط الاستخدام وقواعد الاستخدام وخطط الدفع وأوافق عليها.',
+      goBtn: 'المتابعة إلى الكرة', eAccept: 'حدّد المربعين للمتابعة.',
+      emailL: 'بريدك الإلكتروني (لتذكير انتهاء الإيجار)', eMail: 'أدخل بريدًا إلكترونيًا صحيحًا.', remindL: 'رسالة التذكير',
+      noData: 'هذا النموذج الأولي يحتفظ ببريدك في هذا المتصفح فقط ولا يرسل شيئًا إلى خادم.'
+    },
+    zh: {
+      navTerms: '条款与方案', heroCta: '查看方案与条款', howH: '使用方式', plansH: '付款方案',
+      plansD: '价格根据各国发展水平而定。可按月付费，也可按年付费并赠送两个月。',
+      colEx: '示例国家', cityNote: '城市广告位的价格为所属国家价格的 60%。',
+      termsH: '权利与使用条款',
+      c1h: '仅限广告', c1d: 'Globeboard 出租广告位。租用只赋予你在租期内于该位置展示广告的权利，不包含其他权利。',
+      c2h: '不产生所有权', c2d: '不产生任何所有权。广告位是虚拟的，与真实土地或房产无关，不能出售、转让，也不能作为投资。',
+      c3h: '如何使用广告位', c3d: '每个广告位一条广告。广告须遵守广告规则，上线前会经过审核。违反规则或法律的广告可能被移除。',
+      c4h: '付款与续租', c4d: '可选择按月或按年。租用不会自动续期。月租到期前五天、年租到期前一个月，你会收到电子邮件提醒。',
+      c5h: '你的数据', c5d: '我们只要求提供电子邮箱，且仅用于在租期结束前发送提醒。',
+      draftNote: '这是原型的草稿文本，正式上线前请先审阅。',
+      accept1: '我明白不会产生任何所有权，Globeboard 仅用于广告。',
+      accept2: '我已阅读并接受使用条款、使用规则和付款方案。',
+      goBtn: '继续前往地球', eAccept: '请勾选两个选项后继续。',
+      emailL: '你的邮箱（用于租期结束提醒）', eMail: '请输入有效的邮箱地址。', remindL: '提醒邮件',
+      noData: '此原型仅在此浏览器中保存你的邮箱，不会向服务器发送任何内容。'
+    },
+    ja: {
+      navTerms: '規約とプラン', heroCta: 'プランと規約を見る', howH: 'ご利用の流れ', plansH: 'お支払いプラン',
+      plansD: '料金は各国の発展度に応じて決まります。月払い、または年払いで2か月分無料です。',
+      colEx: '国の例', cityNote: '都市の枠は、その国の料金の60%です。',
+      termsH: '権利と利用規約',
+      c1h: '広告専用', c1d: 'Globeboard は広告枠を貸し出すサービスです。借りると、その期間その場所に広告を表示する権利が得られます。それ以外の権利はありません。',
+      c2h: '所有権はありません', c2d: 'いかなる所有権も生じません。枠は仮想のもので、実在の土地や不動産とは関係なく、売却、譲渡、投資目的での利用はできません。',
+      c3h: '枠の使い方', c3d: '1つの枠につき広告は1件です。広告は広告ルールに従う必要があり、公開前に審査されます。ルールや法律に反する広告は削除されることがあります。',
+      c4h: 'お支払いと更新', c4d: '月払いか年払いを選べます。自動更新はありません。月払いは終了の5日前、年払いは終了の1か月前にメールでお知らせします。',
+      c5h: 'あなたのデータ', c5d: 'お願いするのはメールアドレスのみで、貸出終了前のお知らせにだけ使います。',
+      draftNote: 'プロトタイプ用の仮の文面です。本番公開の前に確認を受けてください。',
+      accept1: '所有権は生じず、Globeboard は広告専用であることを理解しました。',
+      accept2: '利用規約、利用ルール、お支払いプランを読み、同意します。',
+      goBtn: '地球儀に進む', eAccept: '両方のチェックボックスにチェックしてください。',
+      emailL: 'メールアドレス（終了前のお知らせ用）', eMail: '有効なメールアドレスを入力してください。', remindL: 'お知らせメール',
+      noData: 'このプロトタイプはメールアドレスをこのブラウザにのみ保存し、サーバーには何も送信しません。'
+    },
+    ko: {
+      navTerms: '약관 및 요금제', heroCta: '요금제와 약관 보기', howH: '이용 방법', plansH: '결제 요금제',
+      plansD: '가격은 각 국가의 발전 수준에 따라 정해집니다. 월 단위로 결제하거나, 1년을 결제하면 2개월이 무료입니다.',
+      colEx: '국가 예시', cityNote: '도시 자리는 해당 국가 가격의 60%입니다.',
+      termsH: '권리 및 이용 약관',
+      c1h: '광고 전용', c1d: 'Globeboard는 광고 자리를 임대합니다. 임대하면 임대 기간 동안 그 위치에 광고를 표시할 권리만 주어지며, 그 밖의 권리는 없습니다.',
+      c2h: '소유권 없음', c2d: '어떠한 소유권도 발생하지 않습니다. 자리는 가상이며 실제 토지나 부동산과 관련이 없고, 판매하거나 양도하거나 투자 수단으로 사용할 수 없습니다.',
+      c3h: '자리 이용 방법', c3d: '자리당 광고는 하나입니다. 광고는 광고 규칙을 지켜야 하며 게재 전에 심사합니다. 규칙이나 법을 위반한 광고는 삭제될 수 있습니다.',
+      c4h: '결제 및 갱신', c4d: '월간 또는 연간을 선택할 수 있습니다. 임대는 자동으로 갱신되지 않습니다. 월간 임대는 종료 5일 전, 연간 임대는 종료 1개월 전에 이메일로 알려 드립니다.',
+      c5h: '내 데이터', c5d: '이메일 주소만 요청하며, 임대 종료 전 알림을 보내는 용도로만 사용합니다.',
+      draftNote: '프로토타입용 초안 문구입니다. 실제 출시 전에 검토를 받으세요.',
+      accept1: '소유권이 발생하지 않으며 Globeboard는 광고 전용임을 이해합니다.',
+      accept2: '이용 약관, 이용 규칙, 결제 요금제를 읽고 동의합니다.',
+      goBtn: '지구본으로 계속', eAccept: '두 항목을 모두 체크해 주세요.',
+      emailL: '이메일 (임대 종료 알림용)', eMail: '올바른 이메일 주소를 입력하세요.', remindL: '알림 이메일',
+      noData: '이 프로토타입은 이메일을 이 브라우저에만 저장하며 서버로 아무것도 보내지 않습니다.'
+    }
+  };
+  Object.keys(I18N2).forEach(function (l) { Object.keys(I18N2[l]).forEach(function (k) { I18N[l][k] = I18N2[l][k]; }); });
+
+  /* En düşük ödeme tutarı notları */
+  var I18N3 = {
+    tr: { minAll: 'Ödeme başına en düşük tutar: {m}. Bu yüzden daha ucuz alanlarda aylık plan birkaç aydan başlar.', minNote: 'En düşük tutar {m}, bu yüzden bu alanda aylık plan {n} ile başlar.' },
+    en: { minAll: 'Minimum order per payment: {m}. For cheaper spots, the monthly plan starts at several months.', minNote: 'Minimum order is {m}, so the monthly plan for this spot starts at {n}.' },
+    de: { minAll: 'Mindestbetrag pro Zahlung: {m}. Bei günstigeren Flächen beginnt der Monatstarif daher bei mehreren Monaten.', minNote: 'Der Mindestbetrag liegt bei {m}, daher beginnt der Monatstarif für diese Fläche bei {n}.' },
+    fr: { minAll: 'Montant minimum par paiement : {m}. Pour les emplacements moins chers, l\'offre mensuelle commence donc à plusieurs mois.', minNote: 'Le montant minimum est de {m}, l\'offre mensuelle pour cet emplacement commence donc à {n}.' },
+    es: { minAll: 'Importe mínimo por pago: {m}. En los espacios más baratos, el plan mensual empieza por varios meses.', minNote: 'El importe mínimo es {m}, así que el plan mensual de este espacio empieza en {n}.' },
+    pt: { minAll: 'Valor mínimo por pagamento: {m}. Nos espaços mais baratos, o plano mensal começa com vários meses.', minNote: 'O valor mínimo é {m}, então o plano mensal deste espaço começa em {n}.' },
+    it: { minAll: 'Importo minimo per pagamento: {m}. Per gli spazi più economici, il piano mensile parte quindi da più mesi.', minNote: 'L\'importo minimo è {m}, quindi il piano mensile per questo spazio parte da {n}.' },
+    ru: { minAll: 'Минимальная сумма платежа: {m}. Поэтому для более дешёвых мест месячный тариф начинается с нескольких месяцев.', minNote: 'Минимальная сумма — {m}, поэтому месячный тариф для этого места начинается с {n}.' },
+    ar: { minAll: 'الحد الأدنى للدفعة: {m}. لذلك تبدأ الخطة الشهرية للمساحات الأرخص من عدة أشهر.', minNote: 'الحد الأدنى للطلب {m}، لذا تبدأ الخطة الشهرية لهذه المساحة من {n}.' },
+    zh: { minAll: '每笔付款最低金额：{m}。因此价格较低的广告位，按月方案需要从数个月起租。', minNote: '最低金额为 {m}，因此该广告位的按月方案起租期为 {n}。' },
+    ja: { minAll: '1回のお支払いの最低額：{m}。そのため、料金の低い枠では月払いは数か月分から始まります。', minNote: '最低額は {m} のため、この枠の月払いは {n} からです。' },
+    ko: { minAll: '결제당 최소 금액: {m}. 그래서 가격이 낮은 자리는 월간 요금제가 여러 달부터 시작됩니다.', minNote: '최소 금액이 {m}이므로 이 자리의 월간 요금제는 {n}부터 시작합니다.' }
+  };
+  Object.keys(I18N3).forEach(function (l) { Object.keys(I18N3[l]).forEach(function (k) { I18N[l][k] = I18N3[l][k]; }); });
+
+  /* Para birimi notları */
+  var I18N4 = {
+    tr: { curNote: '{c} ile ödersin, yani bu ülkenin para birimiyle. Buradaki kurlar örnektir.', curAll: 'Tablo euro olarak gösterilir. Ödeme sırasında her ülke kendi para birimiyle öder.' },
+    en: { curNote: 'You pay in {c}, the currency of this country. Exchange rates here are examples.', curAll: 'The table is shown in euro. At checkout each country pays in its own currency.' },
+    de: { curNote: 'Du zahlst in {c}, der Währung dieses Landes. Die Wechselkurse hier sind Beispiele.', curAll: 'Die Tabelle zeigt Euro. An der Kasse zahlt jedes Land in seiner eigenen Währung.' },
+    fr: { curNote: 'Tu paies en {c}, la monnaie de ce pays. Les taux de change affichés ici sont des exemples.', curAll: 'Le tableau est en euros. Au paiement, chaque pays règle dans sa propre monnaie.' },
+    es: { curNote: 'Pagas en {c}, la moneda de este país. Los tipos de cambio mostrados aquí son ejemplos.', curAll: 'La tabla se muestra en euros. Al pagar, cada país usa su propia moneda.' },
+    pt: { curNote: 'Você paga em {c}, a moeda deste país. As taxas de câmbio aqui são exemplos.', curAll: 'A tabela está em euros. No pagamento, cada país paga na sua própria moeda.' },
+    it: { curNote: 'Paghi in {c}, la valuta di questo paese. I tassi di cambio mostrati qui sono esempi.', curAll: 'La tabella è in euro. Al pagamento ogni paese usa la propria valuta.' },
+    ru: { curNote: 'Вы платите в валюте {c} — валюте этой страны. Курсы здесь примерные.', curAll: 'Таблица показана в евро. При оплате каждая страна платит в своей валюте.' },
+    ar: { curNote: 'تدفع بعملة {c}، وهي عملة هذه الدولة. أسعار الصرف هنا أمثلة.', curAll: 'يظهر الجدول باليورو. عند الدفع تدفع كل دولة بعملتها المحلية.' },
+    zh: { curNote: '你将以 {c}（该国货币）付款。此处汇率仅为示例。', curAll: '表格以欧元显示。结账时各国使用本国货币付款。' },
+    ja: { curNote: 'お支払いはその国の通貨である {c} です。ここでの為替レートは例示です。', curAll: '表はユーロで表示しています。お支払い時には各国の通貨が使われます。' },
+    ko: { curNote: '이 국가의 통화인 {c}(으)로 결제합니다. 여기의 환율은 예시입니다.', curAll: '표는 유로로 표시됩니다. 결제 시 각 국가는 자국 통화로 결제합니다.' }
+  };
+  Object.keys(I18N4).forEach(function (l) { Object.keys(I18N4[l]).forEach(function (k) { I18N[l][k] = I18N4[l][k]; }); });
+  var I18N5 = {
+    tr: { exH: 'Örnek reklamlar', exD: 'Reklamın küre üzerinde böyle görünür. Aşağıdakiler kurgusal örneklerdir.', freeTwo: '2 ay ücretsiz' },
+    en: { exH: 'Example ads', exD: 'This is how your ad appears on the globe. The ones below are fictional examples.', freeTwo: '2 months free' },
+    de: { exH: 'Beispielanzeigen', exD: 'So erscheint deine Anzeige auf dem Globus. Die folgenden sind fiktive Beispiele.', freeTwo: '2 Monate gratis' },
+    fr: { exH: 'Exemples d\'annonces', exD: 'Voici comment ton annonce apparaît sur le globe. Les exemples ci-dessous sont fictifs.', freeTwo: '2 mois offerts' },
+    es: { exH: 'Anuncios de ejemplo', exD: 'Así se ve tu anuncio en el globo. Los siguientes son ejemplos ficticios.', freeTwo: '2 meses gratis' },
+    pt: { exH: 'Anúncios de exemplo', exD: 'É assim que seu anúncio aparece no globo. Os abaixo são exemplos fictícios.', freeTwo: '2 meses grátis' },
+    it: { exH: 'Annunci di esempio', exD: 'Ecco come appare il tuo annuncio sul globo. Quelli sotto sono esempi di fantasia.', freeTwo: '2 mesi gratis' },
+    ru: { exH: 'Примеры рекламы', exD: 'Так ваша реклама выглядит на глобусе. Ниже вымышленные примеры.', freeTwo: '2 месяца бесплатно' },
+    ar: { exH: 'أمثلة على الإعلانات', exD: 'هكذا يظهر إعلانك على الكرة الأرضية. الأمثلة أدناه خيالية.', freeTwo: 'شهران مجانًا' },
+    zh: { exH: '广告示例', exD: '你的广告会这样显示在地球上。以下为虚构示例。', freeTwo: '免费赠送 2 个月' },
+    ja: { exH: '広告の例', exD: '広告は地球儀上でこのように表示されます。以下は架空の例です。', freeTwo: '2か月分無料' },
+    ko: { exH: '광고 예시', exD: '광고는 지구본에서 이렇게 보입니다. 아래는 가상의 예시입니다.', freeTwo: '2개월 무료' }
+  };
+  Object.keys(I18N5).forEach(function (l) { Object.keys(I18N5[l]).forEach(function (k) { I18N[l][k] = I18N5[l][k]; }); });
+
+  var lang = 'en';
+  var NF, NF2, DF, DN;
+  function money(v) { return (Math.round(v * 100) % 100 === 0 ? NF : NF2).format(v); }
+  function remindDate(plan, until) {
+    var d = new Date(until.getTime());
+    if (plan === 'year') d.setMonth(d.getMonth() - 1); else d.setDate(d.getDate() - 5);
+    return d;
+  }
+  function t(k, v) {
+    var s = (I18N[lang] && I18N[lang][k] != null) ? I18N[lang][k] : (I18N.en[k] != null ? I18N.en[k] : k);
+    if (v) Object.keys(v).forEach(function (x) { s = s.split('{' + x + '}').join(v[x]); });
+    return s;
+  }
+  function $(s) { return document.querySelector(s); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function unit(n, u) {
+    try { return new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'long' }).format(n); }
+    catch (e) { return n + ' ' + u; }
+  }
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- Harita verisi ---------- */
+  function decodeRing(str, off, scale) {
+    var out = [], px = off[0], py = off[1];
+    for (var i = 0; i < str.length; i += 2) {
+      var x = str.charCodeAt(i) - 64, y = str.charCodeAt(i + 1) - 64;
+      x = (x >> 1) ^ (-(x & 1)); y = (y >> 1) ^ (-(y & 1));
+      x += px; y += py; px = x; py = y;
+      out.push([x / scale, y / scale]);
+    }
+    return out;
+  }
+  function closeRing(r) {
+    var a = r[0], b = r[r.length - 1];
+    if (a[0] !== b[0] || a[1] !== b[1]) r.push([a[0], a[1]]);
+    return r;
+  }
+  function fixPoly(rings) {
+    rings = rings.map(function (r) { return closeRing(r.slice()); });
+    if (d3.geoArea({ type: 'Polygon', coordinates: [rings[0]] }) > 2 * Math.PI) rings[0].reverse();
+    for (var i = 1; i < rings.length; i++) {
+      if (d3.geoArea({ type: 'Polygon', coordinates: [rings[i]] }) <= 2 * Math.PI) rings[i].reverse();
+    }
+    return rings;
+  }
+  function buildFeatures(geo) {
+    var scale = geo.UTF8Scale || 1024, list = [];
+    (geo.features || []).forEach(function (f) {
+      var g = f.geometry; if (!g) return;
+      var id = f.id || (f.properties && f.properties.name);
+      if (id === 'ATA' || (f.properties && f.properties.name === 'Antarctica')) return;
+      var polys = [];
+      if (g.type === 'Polygon') {
+        polys.push(g.coordinates.map(function (r, i) { return typeof r === 'string' ? decodeRing(r, g.encodeOffsets[i], scale) : r; }));
+      } else if (g.type === 'MultiPolygon') {
+        g.coordinates.forEach(function (p, pi) {
+          polys.push(p.map(function (r, i) { return typeof r === 'string' ? decodeRing(r, g.encodeOffsets[pi][i], scale) : r; }));
+        });
+      }
+      polys = polys.filter(function (p) { return p[0] && p[0].length > 3; }).map(fixPoly);
+      if (!polys.length) return;
+      list.push({ type: 'Feature', id: id, properties: { name: f.properties.name }, geometry: { type: 'MultiPolygon', coordinates: polys } });
+    });
+    return list;
+  }
+
+  /* ---------- Bölgeler ve fiyatlar ---------- */
+  /* Gelişmişlik basamakları: 1 en gelişmiş, 5 en az gelişmiş. Listede olmayan ülkeler 4. basamak. */
+  var TIERS = {
+    1: 'USA CAN GBR IRL DEU FRA BEL NLD LUX CHE AUT ITA ESP PRT DNK SWE NOR FIN ISL JPN KOR AUS NZL SGP ISR ARE QAT KWT'.split(' '),
+    2: 'GRC CZE POL EST LVA LTU SVN SVK HUN HRV CYP MLT SAU BHR OMN CHL URY PAN CRI TWN PRI TTO BHS ROU BGR'.split(' '),
+    3: 'CHN RUS TUR BRA MEX ARG COL PER ECU DOM PRY GUY SUR BLZ JAM CUB KAZ AZE ARM GEO BLR SRB MNE MKD BIH ALB MDA MYS THA IDN ZAF NAM BWA GAB GNQ IRN IRQ LBY JOR TKM FJI'.split(' '),
+    5: 'AFG BDI TCD CAF COD ERI ETH GMB GIN GNB HTI LBR MDG MWI MLI MOZ NER PRK RWA SLE SOM SSD SDN SYR TGO UGA YEM BFA'.split(' ')
+  };
+  var TIER_PRICE = { 1: 5, 2: 4, 3: 3, 4: 2, 5: 1 };
+  function tierOf(id) { for (var k in TIERS) { if (TIERS[k].indexOf(id) >= 0) return +k; } return 4; }
+  function countryPrice(id) { return TIER_PRICE[tierOf(id)]; }
+  function cityPrice(cc) { return Math.round(countryPrice(cc) * 0.6 * 100) / 100; }
+
+  /* Para birimleri: her ülke kendi parasıyla öder. Fiyat basamakları euro ile tanımlı, kurlar örnektir (11 Ekim 2026). */
+  var CUR_GROUPS = {
+    EUR: 'AUT BEL BGR HRV CYP EST FIN FRA DEU GRC IRL ITA LVA LTU LUX MLT NLD PRT SVK SVN ESP MNE AND MCO SMR XKX',
+    USD: 'USA ECU SLV PRI PAN TLS ZWE', GBP: 'GBR', JPY: 'JPN', KRW: 'KOR', CNY: 'CHN', INR: 'IND', IDR: 'IDN', AUD: 'AUS', NZD: 'NZL', CAD: 'CAN', CHF: 'CHE LIE',
+    SEK: 'SWE', NOK: 'NOR', DKK: 'DNK GRL', ISK: 'ISL', PLN: 'POL', CZK: 'CZE', HUF: 'HUN', RON: 'ROU', TRY: 'TUR', RUB: 'RUS', UAH: 'UKR', BYN: 'BLR',
+    KZT: 'KAZ', UZS: 'UZB', KGS: 'KGZ', TJS: 'TJK', TMT: 'TKM', AZN: 'AZE', AMD: 'ARM', GEL: 'GEO', MDL: 'MDA', ALL: 'ALB', MKD: 'MKD', RSD: 'SRB', BAM: 'BIH',
+    ILS: 'ISR PSE', JOD: 'JOR', LBP: 'LBN', SYP: 'SYR', IQD: 'IRQ', IRR: 'IRN', SAR: 'SAU', AED: 'ARE', QAR: 'QAT', KWD: 'KWT', BHD: 'BHR', OMR: 'OMN', YER: 'YEM',
+    EGP: 'EGY', LYD: 'LBY', TND: 'TUN', DZD: 'DZA', MAD: 'MAR ESH', SDG: 'SDN', SSP: 'SSD', ETB: 'ETH', KES: 'KEN', UGX: 'UGA', TZS: 'TZA', RWF: 'RWA', BIF: 'BDI',
+    NGN: 'NGA', GHS: 'GHA', ZAR: 'ZAF', NAD: 'NAM', LSL: 'LSO', SZL: 'SWZ', BWP: 'BWA', MZN: 'MOZ', MGA: 'MDG', MWK: 'MWI', ZMW: 'ZMB', AOA: 'AGO', CDF: 'COD',
+    XAF: 'CMR CAF GAB COG TCD GNQ', XOF: 'BEN BFA CIV GNB MLI NER SEN TGO', GNF: 'GIN', SLE: 'SLE', LRD: 'LBR', GMD: 'GMB', MRU: 'MRT', SOS: 'SOM', DJF: 'DJI', ERN: 'ERI',
+    MXN: 'MEX', BRL: 'BRA', ARS: 'ARG', CLP: 'CHL', COP: 'COL', PEN: 'PER', UYU: 'URY', PYG: 'PRY', BOB: 'BOL', VES: 'VEN', GYD: 'GUY', SRD: 'SUR', BZD: 'BLZ',
+    GTQ: 'GTM', HNL: 'HND', NIO: 'NIC', CRC: 'CRI', DOP: 'DOM', CUP: 'CUB', HTG: 'HTI', JMD: 'JAM', TTD: 'TTO', BSD: 'BHS', THB: 'THA', VND: 'VNM', MYR: 'MYS',
+    PHP: 'PHL', SGD: 'SGP', KHR: 'KHM', LAK: 'LAO', MMK: 'MMR', BDT: 'BGD', PKR: 'PAK', LKR: 'LKA', NPR: 'NPL', BTN: 'BTN', AFN: 'AFG', MNT: 'MNG', BND: 'BRN',
+    PGK: 'PNG', SBD: 'SLB', VUV: 'VUT', FJD: 'FJI', TWD: 'TWN', KPW: 'PRK'
+  };
+  var CUR_OF = {};
+  Object.keys(CUR_GROUPS).forEach(function (c) { CUR_GROUPS[c].split(' ').forEach(function (id) { CUR_OF[id] = c; }); });
+  var RATES = { EUR: 1 };
+  ('USD=1.120529,GBP=0.847063,JPY=177.326719,KRW=1503.962594,CNY=7.506566,INR=108.348074,IDR=20031.613622,AUD=1.606346,NZD=1.996421,CAD=1.596359,CHF=0.930828,SEK=11.193804,NOK=10.713923,DKK=7.475418,ISK=136.805517,PLN=4.382411,CZK=24.374729,HUF=365.337254,RON=5.342634,TRY=55.249844,RUB=95.57785,UAH=50.336829,BYN=3.405361,KZT=505.627868,UZS=13314.753778,KGS=98.034868,TJS=10.346663,TMT=3.92174,AZN=1.904395,AMD=405.985967,GEL=2.914092,MDL=20.007545,ALL=91.77217,MKD=61.497,RSD=117.398776,BAM=1.95583,ILS=3.431019,JOD=0.794453,LBP=100287.132627,SYP=136.326113,IQD=1700.743842,IRR=1988223.51325,SAR=4.201975,AED=4.115134,QAR=4.078717,KWD=0.346989,BHD=0.421318,OMR=0.430839,YER=264.264217,EGP=58.659768,LYD=7.183899,TND=3.363902,DZD=150.554976,MAD=10.96295,SDG=501.089985,SSP=6578.090011,ETB=188.734485,KES=145.373062,UGX=4474.451266,TZS=2940.526335,RWF=1658.248262,BIF=3372.986977,NGN=1499.424537,GHS=13.229755,ZAR=18.513305,NAD=18.525098,LSL=18.525098,SZL=18.525098,BWP=15.937409,MZN=71.522065,MGA=4968.533384,MWK=1956.911696,ZMW=22.248629,AOA=1075.162909,CDF=2595.87218,XAF=655.957,XOF=655.957,GNF=9850.246613,SLE=27.551207,LRD=191.313234,GMD=83.471131,MRU=45.119054,SOS=640.539889,DJF=199.141112,ERN=16.807899,MXN=20.518554,BRL=5.614836,ARS=1698.580085,CLP=1097.251383,COP=3628.034397,PEN=3.854928,UYU=44.86502,PYG=6512.810477,BOB=13.371596,VES=982.004544,GYD=234.386286,SRD=42.217046,BZD=2.241053,GTQ=8.551062,HNL=30.033533,NIO=41.176901,CRC=510.138255,DOP=67.917628,CUP=26.892639,HTG=146.728007,JMD=178.54881,TTD=8.311068,BSD=1.120527,THB=37.59661,VND=28998.963236,MYR=4.580376,PHP=70.467366,SGD=1.434833,KHR=4542.776316,LAK=24841.849027,MMK=2347.299722,BDT=137.994826,PKR=310.103542,LKR=370.446356,NPR=173.408899,BTN=108.380562,AFN=72.634206,MNT=4058.200293,BND=1.434833,PGK=5.04329,SBD=8.905817,VUV=134.045068,FJD=2.519224,TWD=35.775709').split(',').forEach(function (p) { var a = p.split('='); RATES[a[0]] = +a[1]; });
+
+  function curOf(r) {
+    var c = CUR_OF[r.type === 'city' ? r.cc : r.id] || 'EUR';
+    return RATES[c] ? c : 'EUR';
+  }
+  function ceilSig(x, sig) { var d = Math.pow(10, Math.floor(Math.log10(x)) - sig + 1); return Number((Math.ceil(x / d - 1e-9) * d).toPrecision(12)); }
+  function niceCeil(x) { var a = ceilSig(x, 2); return a / x - 1 > 0.05 ? ceilSig(x, 3) : a; }
+  function toLocal(eur, cur) { return cur === 'EUR' ? eur : niceCeil(eur * RATES[cur]); }
+  function unitLocal(r) { return toLocal(r.price, curOf(r)); }
+  var FMT = {};
+  function moneyC(v, cur) {
+    var frac = Math.round(v * 100) % 100 === 0 ? 0 : 2, key = lang + cur + frac;
+    if (!(key in FMT)) {
+      try { FMT[key] = new Intl.NumberFormat(lang, { style: 'currency', currency: cur, minimumFractionDigits: frac, maximumFractionDigits: frac }); }
+      catch (e) { FMT[key] = null; }
+    }
+    return FMT[key] ? FMT[key].format(v) : cur + ' ' + v;
+  }
+  function curName(c) {
+    try { var n = new Intl.DisplayNames([lang], { type: 'currency' }).of(c); return n && n !== c ? n + ' (' + c + ')' : c; }
+    catch (e) { return c; }
+  }
+
+  /* id, Türkçe, İngilizce, yerel yazım, ülke, boylam, enlem, aylık fiyat */
+  var CITIES = [
+    ['istanbul', 'İstanbul', 'Istanbul', 'İstanbul', 'TUR', 28.98, 41.01, 1500], ['ankara', 'Ankara', 'Ankara', 'Ankara', 'TUR', 32.85, 39.93, 700], ['izmir', 'İzmir', 'Izmir', 'İzmir', 'TUR', 27.14, 38.42, 600],
+    ['london', 'Londra', 'London', 'London', 'GBR', -0.12, 51.5, 1500], ['paris', 'Paris', 'Paris', 'Paris', 'FRA', 2.35, 48.86, 1400], ['berlin', 'Berlin', 'Berlin', 'Berlin', 'DEU', 13.4, 52.52, 1100],
+    ['madrid', 'Madrid', 'Madrid', 'Madrid', 'ESP', -3.7, 40.42, 900], ['rome', 'Roma', 'Rome', 'Roma', 'ITA', 12.5, 41.9, 900], ['amsterdam', 'Amsterdam', 'Amsterdam', 'Amsterdam', 'NLD', 4.9, 52.37, 800],
+    ['moscow', 'Moskova', 'Moscow', 'Москва', 'RUS', 37.6, 55.75, 1100], ['dubai', 'Dubai', 'Dubai', 'دبي', 'ARE', 55.3, 25.2, 1300], ['riyadh', 'Riyad', 'Riyadh', 'الرياض', 'SAU', 46.7, 24.7, 800],
+    ['cairo', 'Kahire', 'Cairo', 'القاهرة', 'EGY', 31.24, 30.04, 600], ['lagos', 'Lagos', 'Lagos', 'Lagos', 'NGA', 3.4, 6.5, 500], ['joburg', 'Johannesburg', 'Johannesburg', 'Johannesburg', 'ZAF', 28.04, -26.2, 600],
+    ['nairobi', 'Nairobi', 'Nairobi', 'Nairobi', 'KEN', 36.8, -1.29, 400], ['mumbai', 'Mumbai', 'Mumbai', 'Mumbai', 'IND', 72.88, 19.07, 1000], ['delhi', 'Delhi', 'Delhi', 'Delhi', 'IND', 77.2, 28.6, 1000],
+    ['bangkok', 'Bangkok', 'Bangkok', 'Bangkok', 'THA', 100.5, 13.75, 800], ['singapore', 'Singapur', 'Singapore', 'Singapore', 'SGP', 103.82, 1.35, 1200], ['jakarta', 'Cakarta', 'Jakarta', 'Jakarta', 'IDN', 106.8, -6.2, 800],
+    ['tokyo', 'Tokyo', 'Tokyo', '東京', 'JPN', 139.7, 35.7, 1600], ['seoul', 'Seul', 'Seoul', '서울', 'KOR', 126.98, 37.57, 1200], ['beijing', 'Pekin', 'Beijing', '北京', 'CHN', 116.4, 39.9, 1400],
+    ['shanghai', 'Şanghay', 'Shanghai', '上海', 'CHN', 121.47, 31.23, 1500], ['sydney', 'Sidney', 'Sydney', 'Sydney', 'AUS', 151.2, -33.87, 1100], ['newyork', 'New York', 'New York', 'New York', 'USA', -74, 40.7, 1800],
+    ['losangeles', 'Los Angeles', 'Los Angeles', 'Los Angeles', 'USA', -118.24, 34.05, 1500], ['chicago', 'Chicago', 'Chicago', 'Chicago', 'USA', -87.6, 41.88, 1000], ['toronto', 'Toronto', 'Toronto', 'Toronto', 'CAN', -79.38, 43.65, 900],
+    ['mexico', 'Mexico City', 'Mexico City', 'Ciudad de México', 'MEX', -99.13, 19.43, 800], ['saopaulo', 'São Paulo', 'São Paulo', 'São Paulo', 'BRA', -46.63, -23.55, 1100], ['buenosaires', 'Buenos Aires', 'Buenos Aires', 'Buenos Aires', 'ARG', -58.38, -34.6, 700],
+    ['bogota', 'Bogota', 'Bogotá', 'Bogotá', 'COL', -74.07, 4.71, 500], ['santiago', 'Santiago', 'Santiago', 'Santiago', 'CHL', -70.65, -33.45, 500], ['lima', 'Lima', 'Lima', 'Lima', 'PER', -77.04, -12.05, 450]
+  ].map(function (c) { return { id: c[0], tr: c[1], en: c[2], loc: c[3], cc: c[4], lon: c[5], lat: c[6], rank: 1 }; });
+
+  /* Ek şehirler: en, tr, yerel yazım, ülke, boylam, enlem, öncelik (2 = yakınlaşınca, 3 = daha çok yakınlaşınca veya ülke seçilince görünür). Boş alanlar İngilizce yazımı kullanır. */
+  function slug(s) { return s.replace(/ı/g, 'i').replace(/İ/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''); }
+  (function () {
+    var seen = {}; CITIES.forEach(function (c) { seen[c.id] = 1; });
+    var EXTRA = [["Vienna","Viyana","Wien","AUT",16.37,48.21,2],["Brussels","Brüksel","","BEL",4.35,50.85,2],["Sofia","Sofya","","BGR",23.32,42.7,2],["Zagreb","","","HRV",15.98,45.81,2],["Nicosia","Lefkoşa","","CYP",33.38,35.17,2],["Tallinn","","","EST",24.75,59.44,2],["Helsinki","","","FIN",24.94,60.17,2],["Athens","Atina","Αθήνα","GRC",23.73,37.98,2],["Dublin","","","IRL",-6.26,53.35,2],["Riga","","","LVA",24.11,56.95,2],["Vilnius","","","LTU",25.28,54.69,2],["Luxembourg","Lüksemburg","","LUX",6.13,49.61,2],["Valletta","Valetta","","MLT",14.51,35.9,2],["Lisbon","Lizbon","Lisboa","PRT",-9.14,38.72,2],["Bratislava","","","SVK",17.11,48.15,2],["Ljubljana","","","SVN",14.51,46.06,2],["Podgorica","","","MNE",19.26,42.44,2],["Washington, D.C.","Vaşington","","USA",-77.04,38.91,2],["Quito","","","ECU",-78.47,-0.18,2],["San Salvador","","","SLV",-89.19,13.69,2],["Panama City","Panama","","PAN",-79.52,8.98,2],["Dili","","","TLS",125.57,-8.56,2],["Harare","","","ZWE",31.05,-17.83,2],["Canberra","","","AUS",149.13,-35.28,2],["Wellington","","","NZL",174.78,-41.29,2],["Ottawa","","","CAN",-75.7,45.42,2],["Bern","","Bern","CHE",7.45,46.95,2],["Stockholm","Stokholm","","SWE",18.07,59.33,2],["Oslo","","","NOR",10.75,59.91,2],["Copenhagen","Kopenhag","","DNK",12.57,55.68,2],["Nuuk","","","GRL",-51.72,64.18,2],["Reykjavik","","","ISL",-21.94,64.15,2],["Warsaw","Varşova","Warszawa","POL",21.01,52.23,2],["Prague","Prag","Praha","CZE",14.42,50.09,2],["Budapest","Budapeşte","","HUN",19.04,47.5,2],["Bucharest","Bükreş","București","ROU",26.1,44.43,2],["Kyiv","Kiev","Київ","UKR",30.52,50.45,2],["Minsk","","Мінск","BLR",27.57,53.9,2],["Astana","","Астана","KAZ",71.43,51.17,2],["Tashkent","Taşkent","","UZB",69.24,41.3,2],["Bishkek","Bişkek","","KGZ",74.59,42.87,2],["Dushanbe","Duşanbe","","TJK",68.77,38.56,2],["Ashgabat","Aşkabat","","TKM",58.38,37.95,2],["Baku","Bakü","","AZE",49.87,40.41,2],["Yerevan","Erivan","","ARM",44.51,40.18,2],["Tbilisi","Tiflis","","GEO",44.79,41.72,2],["Chișinău","Kişinev","","MDA",28.86,47.01,2],["Tirana","","","ALB",19.82,41.33,2],["Skopje","Üsküp","","MKD",21.43,42.0,2],["Belgrade","Belgrad","","SRB",20.46,44.79,2],["Sarajevo","Saraybosna","","BIH",18.41,43.86,2],["Tel Aviv","","","ISR",34.78,32.08,2],["Ramallah","Remallah","","PSE",35.2,31.9,2],["Amman","Amman","عمّان","JOR",35.93,31.95,2],["Beirut","Beyrut","بيروت","LBN",35.5,33.89,2],["Damascus","Şam","دمشق","SYR",36.29,33.51,2],["Baghdad","Bağdat","بغداد","IRQ",44.37,33.31,2],["Tehran","Tahran","تهران","IRN",51.39,35.69,2],["Abu Dhabi","Ebu Dabi","أبوظبي","ARE",54.37,24.45,2],["Doha","","الدوحة","QAT",51.53,25.29,2],["Kuwait City","Kuveyt","الكويت","KWT",47.98,29.38,2],["Manama","","المنامة","BHR",50.58,26.23,2],["Muscat","Maskat","مسقط","OMN",58.41,23.59,2],["Sanaa","Sana","صنعاء","YEM",44.21,15.37,2],["Jeddah","Cidde","جدة","SAU",39.17,21.54,2],["Tripoli","Trablus","طرابلس","LBY",13.19,32.89,2],["Tunis","Tunus","تونس","TUN",10.18,36.81,2],["Algiers","Cezayir","الجزائر","DZA",3.06,36.75,2],["Rabat","","الرباط","MAR",-6.84,34.02,2],["Casablanca","Kazablanka","الدار البيضاء","MAR",-7.59,33.57,2],["Laayoune","El Ayun","","ESH",-13.2,27.15,2],["Alexandria","İskenderiye","الإسكندرية","EGY",29.92,31.2,2],["Khartoum","Hartum","الخرطوم","SDN",32.56,15.5,2],["Juba","","","SSD",31.58,4.85,2],["Addis Ababa","","","ETH",38.75,9.03,2],["Kampala","","","UGA",32.58,0.35,2],["Dodoma","","","TZA",35.74,-6.16,2],["Dar es Salaam","Darüsselam","","TZA",39.28,-6.79,2],["Kigali","","","RWA",30.06,-1.95,2],["Gitega","","","BDI",29.93,-3.43,2],["Abuja","","","NGA",7.49,9.08,2],["Accra","","","GHA",-0.19,5.6,2],["Pretoria","","","ZAF",28.19,-25.75,2],["Cape Town","","","ZAF",18.42,-33.92,2],["Durban","","","ZAF",31.02,-29.86,2],["Windhoek","","","NAM",17.08,-22.56,2],["Maseru","","","LSO",27.48,-29.31,2],["Mbabane","","","SWZ",31.14,-26.31,2],["Gaborone","","","BWA",25.91,-24.65,2],["Maputo","","","MOZ",32.57,-25.97,2],["Antananarivo","","","MDG",47.51,-18.88,2],["Lilongwe","","","MWI",33.79,-13.96,2],["Lusaka","","","ZMB",28.29,-15.39,2],["Luanda","","","AGO",13.23,-8.84,2],["Kinshasa","","","COD",15.31,-4.32,2],["Yaoundé","","","CMR",11.52,3.85,2],["Bangui","","","CAF",18.56,4.36,2],["Libreville","","","GAB",9.45,0.39,2],["Brazzaville","","","COG",15.28,-4.27,2],["N'Djamena","","","TCD",15.04,12.13,2],["Malabo","","","GNQ",8.78,3.75,2],["Porto-Novo","","","BEN",2.63,6.5,2],["Ouagadougou","","","BFA",-1.52,12.37,2],["Yamoussoukro","","","CIV",-5.28,6.82,2],["Abidjan","","","CIV",-4.02,5.36,2],["Bissau","","","GNB",-15.6,11.86,2],["Bamako","","","MLI",-8.0,12.64,2],["Niamey","","","NER",2.11,13.51,2],["Dakar","","","SEN",-17.47,14.69,2],["Lomé","","","TGO",1.22,6.13,2],["Conakry","","","GIN",-13.68,9.64,2],["Freetown","","","SLE",-13.23,8.48,2],["Monrovia","","","LBR",-10.8,6.3,2],["Banjul","","","GMB",-16.58,13.45,2],["Nouakchott","","","MRT",-15.98,18.09,2],["Mogadishu","Mogadişu","","SOM",45.34,2.05,2],["Djibouti","Cibuti","","DJI",43.15,11.59,2],["Asmara","","","ERI",38.93,15.32,2],["Brasília","","","BRA",-47.93,-15.79,2],["Rio de Janeiro","","","BRA",-43.17,-22.91,2],["Montevideo","","","URY",-56.19,-34.9,2],["Asunción","","","PRY",-57.58,-25.26,2],["La Paz","","","BOL",-68.15,-16.5,2],["Caracas","","","VEN",-66.9,10.48,2],["Georgetown","","","GUY",-58.16,6.8,2],["Paramaribo","","","SUR",-55.2,5.85,2],["Belmopan","","","BLZ",-88.77,17.25,2],["Guatemala City","Guatemala","","GTM",-90.51,14.63,2],["Tegucigalpa","","","HND",-87.2,14.07,2],["Managua","","","NIC",-86.25,12.13,2],["San José","","","CRI",-84.09,9.93,2],["Santo Domingo","","","DOM",-69.93,18.49,2],["Havana","Havana","La Habana","CUB",-82.37,23.11,2],["Port-au-Prince","Port-o-Prens","","HTI",-72.34,18.54,2],["Kingston","","","JAM",-76.79,18.0,2],["Port of Spain","","","TTO",-61.52,10.66,2],["Nassau","","","BHS",-77.35,25.04,2],["San Juan","","","PRI",-66.11,18.47,2],["Hanoi","","","VNM",105.85,21.03,2],["Ho Chi Minh City","Ho Şi Min","","VNM",106.63,10.82,2],["Kuala Lumpur","","","MYS",101.69,3.14,2],["Manila","","","PHL",120.98,14.6,2],["Phnom Penh","","","KHM",104.92,11.56,2],["Vientiane","","","LAO",102.6,17.97,2],["Naypyidaw","","","MMR",96.08,19.76,2],["Yangon","Yangon","","MMR",96.2,16.87,2],["Dhaka","Dakka","","BGD",90.41,23.81,2],["Islamabad","","","PAK",73.05,33.68,2],["Karachi","Karaçi","","PAK",67.0,24.86,2],["Lahore","Lahor","","PAK",74.34,31.55,2],["Colombo","Kolombo","","LKA",79.86,6.93,2],["Kathmandu","Katmandu","","NPL",85.32,27.72,2],["Thimphu","","","BTN",89.64,27.47,2],["Kabul","","","AFG",69.17,34.53,2],["Ulaanbaatar","Ulan Batur","","MNG",106.91,47.89,2],["Bandar Seri Begawan","","","BRN",114.94,4.89,2],["Port Moresby","","","PNG",147.18,-9.44,2],["Honiara","","","SLB",159.97,-9.43,2],["Port Vila","","","VUT",168.32,-17.73,2],["Suva","","","FJI",178.44,-18.14,2],["Taipei","Taypey","台北","TWN",121.57,25.03,2],["Pyongyang","","평양","PRK",125.75,39.02,2],["Malé","","","MDV",73.51,4.18,2],["Port Louis","","","MUS",57.5,-20.16,2],["Apia","","","WSM",-171.76,-13.83,2],["Nukuʻalofa","","","TON",-175.2,-21.14,2],["Bridgetown","","","BRB",-59.62,13.1,2],["Andorra la Vella","","","AND",1.52,42.51,2],["Monaco","","","MCO",7.42,43.74,2],["Vaduz","","","LIE",9.52,47.14,2],["San Marino","","","SMR",12.45,43.94,2],["Praia","","","CPV",-23.51,14.93,2],["Moroni","","","COM",43.26,-11.7,2],["São Tomé","","","STP",6.73,0.34,2],["Pristina","Priştine","","XKX",21.17,42.67,2],["Nouméa","","","NCL",166.46,-22.28,2],["Papeete","","","PYF",-149.57,-17.54,2],["Osaka","","","JPN",135.5,34.69,2],["Busan","","부산","KOR",129.08,35.18,2],["Shenzhen","","深圳","CHN",114.06,22.54,2],["Guangzhou","","广州","CHN",113.26,23.13,2],["Hong Kong","","香港","CHN",114.17,22.32,2],["Chengdu","","成都","CHN",104.07,30.57,2],["Kolkata","Kalküta","","IND",88.36,22.57,2],["Bengaluru","Bangalor","","IND",77.59,12.97,2],["Chennai","","","IND",80.27,13.08,2],["Barcelona","Barselona","","ESP",2.17,41.39,2],["Milan","Milano","","ITA",9.19,45.46,2],["Munich","Münih","München","DEU",11.58,48.14,2],["Hamburg","","","DEU",9.99,53.55,2],["Frankfurt","","","DEU",8.68,50.11,2],["Lyon","","","FRA",4.84,45.76,2],["Marseille","Marsilya","","FRA",5.37,43.3,2],["Manchester","","","GBR",-2.24,53.48,2],["Saint Petersburg","","","RUS",30.32,59.93,2],["Novosibirsk","","","RUS",82.93,55.03,2],["Vladivostok","","","RUS",131.89,43.12,2],["Perth","","","AUS",115.86,-31.95,2],["Melbourne","","","AUS",144.96,-37.81,2],["Brisbane","","","AUS",153.03,-27.47,2],["Auckland","","","NZL",174.76,-36.85,2],["Vancouver","","","CAN",-123.12,49.28,2],["Montreal","","","CAN",-73.57,45.5,2],["San Francisco","","","USA",-122.42,37.77,2],["Houston","","","USA",-95.37,29.76,2],["Miami","","","USA",-80.19,25.76,2],["Seattle","","","USA",-122.33,47.61,2],["Boston","","","USA",-71.06,42.36,2],["Dallas","","","USA",-96.8,32.78,2],["Atlanta","","","USA",-84.39,33.75,2],["Las Vegas","","","USA",-115.14,36.17,2],["Anchorage","","","USA",-149.9,61.22,2],["Honolulu","","","USA",-157.86,21.31,2],["Salvador","","","BRA",-38.5,-12.97,2],["Medellín","","","COL",-75.57,6.24,2],["Guadalajara","","","MEX",-103.35,20.67,2],["Monterrey","","","MEX",-100.32,25.69,2],["Adana","","","TUR",35.32,37.0,3],["Adıyaman","","","TUR",38.28,37.76,3],["Afyonkarahisar","","","TUR",30.54,38.76,3],["Ağrı","","","TUR",43.05,39.72,3],["Aksaray","","","TUR",34.03,38.37,3],["Amasya","","","TUR",35.83,40.65,3],["Antalya","","","TUR",30.71,36.9,3],["Ardahan","","","TUR",42.7,41.11,3],["Artvin","","","TUR",41.82,41.18,3],["Aydın","","","TUR",27.84,37.85,3],["Balıkesir","","","TUR",27.89,39.65,3],["Bartın","","","TUR",32.34,41.64,3],["Batman","","","TUR",41.13,37.89,3],["Bayburt","","","TUR",40.23,40.26,3],["Bilecik","","","TUR",29.98,40.15,3],["Bingöl","","","TUR",40.5,38.88,3],["Bitlis","","","TUR",42.11,38.4,3],["Bolu","","","TUR",31.61,40.74,3],["Burdur","","","TUR",30.29,37.72,3],["Bursa","","","TUR",29.06,40.19,3],["Çanakkale","","","TUR",26.41,40.15,3],["Çankırı","","","TUR",33.62,40.6,3],["Çorum","","","TUR",34.95,40.55,3],["Denizli","","","TUR",29.09,37.78,3],["Diyarbakır","","","TUR",40.22,37.91,3],["Düzce","","","TUR",31.16,40.84,3],["Edirne","","","TUR",26.56,41.68,3],["Elazığ","","","TUR",39.22,38.67,3],["Erzincan","","","TUR",39.49,39.75,3],["Erzurum","","","TUR",41.27,39.9,3],["Eskişehir","","","TUR",30.52,39.78,3],["Gaziantep","","","TUR",37.38,37.07,3],["Giresun","","","TUR",38.39,40.91,3],["Gümüşhane","","","TUR",39.48,40.46,3],["Hakkâri","","","TUR",43.74,37.58,3],["Hatay","","","TUR",36.16,36.2,3],["Iğdır","","","TUR",44.04,39.92,3],["Isparta","","","TUR",30.55,37.76,3],["Kahramanmaraş","","","TUR",36.94,37.58,3],["Karabük","","","TUR",32.62,41.2,3],["Karaman","","","TUR",33.22,37.18,3],["Kars","","","TUR",43.09,40.6,3],["Kastamonu","","","TUR",33.78,41.38,3],["Kayseri","","","TUR",35.49,38.72,3],["Kilis","","","TUR",37.12,36.72,3],["Kırıkkale","","","TUR",33.51,39.85,3],["Kırklareli","","","TUR",27.22,41.74,3],["Kırşehir","","","TUR",34.16,39.15,3],["Kocaeli","","","TUR",29.92,40.77,3],["Konya","","","TUR",32.49,37.87,3],["Kütahya","","","TUR",29.98,39.42,3],["Malatya","","","TUR",38.31,38.35,3],["Manisa","","","TUR",27.43,38.61,3],["Mardin","","","TUR",40.74,37.31,3],["Mersin","","","TUR",34.64,36.81,3],["Muğla","","","TUR",28.36,37.22,3],["Muş","","","TUR",41.49,38.74,3],["Nevşehir","","","TUR",34.72,38.62,3],["Niğde","","","TUR",34.68,37.97,3],["Ordu","","","TUR",37.88,40.98,3],["Osmaniye","","","TUR",36.25,37.07,3],["Rize","","","TUR",40.52,41.02,3],["Sakarya","","","TUR",30.4,40.78,3],["Samsun","","","TUR",36.33,41.29,3],["Şanlıurfa","","","TUR",38.79,37.16,3],["Siirt","","","TUR",41.94,37.93,3],["Sinop","","","TUR",35.15,42.03,3],["Sivas","","","TUR",37.02,39.75,3],["Şırnak","","","TUR",42.46,37.52,3],["Tekirdağ","","","TUR",27.51,40.98,3],["Tokat","","","TUR",36.55,40.31,3],["Trabzon","","","TUR",39.72,41.0,3],["Tunceli","","","TUR",39.55,39.11,3],["Uşak","","","TUR",29.41,38.68,3],["Van","","","TUR",43.38,38.5,3],["Yalova","","","TUR",29.27,40.65,3],["Yozgat","","","TUR",34.81,39.82,3],["Zonguldak","","","TUR",31.8,41.46,3]];
+    EXTRA.forEach(function (e) {
+      var id = e[3].toLowerCase() + '_' + slug(e[0]); if (seen[id]) return; seen[id] = 1;
+      CITIES.push({ id: id, tr: e[1] || e[0], en: e[0], loc: e[2] || e[0], cc: e[3], lon: e[4], lat: e[5], rank: e[6] });
+    });
+  })();
+
+  var features = [], regions = new Map(), worldOk = false;
+  try {
+    if (window.__WORLD) { features = buildFeatures(window.__WORLD); worldOk = features.length > 20; }
+  } catch (err) { console.error(err); }
+
+  features.forEach(function (f) {
+    /* Etiket ve odak noktası: en büyük parçanın merkezi (Alaska veya Guyana gibi uzak parçalar kaydırmasın) */
+    var best = null, ba = -1;
+    f.geometry.coordinates.forEach(function (poly) { var pa = d3.geoArea({ type: 'Polygon', coordinates: poly }); if (pa > ba) { ba = pa; best = poly; } });
+    var c = best ? d3.geoCentroid({ type: 'Polygon', coordinates: best }) : d3.geoCentroid(f), a = d3.geoArea(f);
+    regions.set('c:' + f.id, { key: 'c:' + f.id, type: 'country', id: f.id, en: f.properties.name || String(f.id), price: countryPrice(f.id), lon: c[0], lat: c[1], area: a, zoom: a > 0.3 ? 1.15 : a > 0.05 ? 1.8 : 2.6, feature: f });
+  });
+  CITIES.forEach(function (c) {
+    regions.set('y:' + c.id, { key: 'y:' + c.id, type: 'city', id: c.id, cc: c.cc, en: c.en, price: cityPrice(c.cc), lon: c.lon, lat: c.lat, zoom: 2.6, city: c });
+  });
+
+  /* Komşu ülkeler farklı tonda boyanır, böylece sınırlar net seçilir. Komşuluk, ortak sınır noktalarından bulunur. */
+  var TONES = ['#EEF3EF', '#E2EBDC', '#F2EAD6', '#E7E4F1', '#F0E2E1'];
+  var TONE_OF = {};
+  (function () {
+    var i, j;
+    try {
+      var cell = {}, nb = {};
+      features.forEach(function (f) {
+        nb[f.id] = {};
+        f.geometry.coordinates.forEach(function (poly) {
+          poly.forEach(function (ring) {
+            for (var q = 0; q < ring.length; q++) {
+              var k = Math.round(ring[q][0] * 2) + ',' + Math.round(ring[q][1] * 2);
+              (cell[k] || (cell[k] = {}))[f.id] = 1;
+            }
+          });
+        });
+      });
+      Object.keys(cell).forEach(function (k) {
+        var ids = Object.keys(cell[k]);
+        for (i = 0; i < ids.length; i++) for (j = 0; j < ids.length; j++) if (i !== j) nb[ids[i]][ids[j]] = 1;
+      });
+      var order = features.map(function (f) { return f.id; }).sort(function (a, b) { return Object.keys(nb[b]).length - Object.keys(nb[a]).length; });
+      order.forEach(function (id) {
+        var use = TONES.map(function () { return 0; });
+        Object.keys(nb[id]).forEach(function (n) { if (n in TONE_OF) use[TONE_OF[n]]++; });
+        var bi = 0; for (i = 1; i < TONES.length; i++) if (use[i] < use[bi]) bi = i;
+        TONE_OF[id] = bi;
+      });
+    } catch (err) { console.error(err); }
+    features.forEach(function (f, n) { if (!(f.id in TONE_OF)) TONE_OF[f.id] = n % TONES.length; });
+  })();
+  var COUNTRY_ORDER = features.map(function (f) { return regions.get('c:' + f.id); }).sort(function (a, b) { return b.area - a.area; });
+  function nameOf(r) {
+    if (r.type === 'city') {
+      var c = r.city;
+      if (lang === 'tr') return c.tr;
+      return CC_LANG[c.cc] === lang ? c.loc : c.en;
+    }
+    if (r._nl === lang) return r._n;
+    var a2 = A2[r.id], out = r.en;
+    if (a2 && DN) { try { var n = DN.of(a2); if (n && n !== a2) out = n; } catch (e) { /* İngilizce ada dön */ } }
+    r._nl = lang; r._n = out;
+    return out;
+  }
+
+  /* ---------- Kiralamalar ---------- */
+  function addMonths(d, n) { var x = new Date(d.getTime()); x.setMonth(x.getMonth() + n); return x; }
+  var now = new Date();
+  var rentals = {};
+  [
+    ['c:JPN', 'Hoshi Coffee', '朝いちばんの一杯', '東京と大阪に120店舗。', '#9A3412', 'month', 3],
+    ['c:DEU', 'Nordlicht Mobil', 'Überall voller Empfang', 'Durchgehend verbunden zwischen den Städten.', '#1D4ED8', 'year', 1],
+    ['c:BRA', 'Aurora Seguros', 'Olhe o amanhã com tranquilidade', 'Nova geração de seguros.', '#15803D', 'month', 6],
+    ['c:IDN', 'Kopi Senja', 'Kopi di kala senja', 'Biji segar dari pulau ke pulau.', '#7C2D12', 'month', 2],
+    ['y:istanbul', 'Boğaz Vapur', 'İki kıta, bir bilet', 'Her yarım saatte bir kalkış.', '#0E7490', 'month', 4]
+  ].forEach(function (s) {
+    if (!regions.has(s[0])) return;
+    var m = s[5] === 'year' ? 12 * s[6] : s[6];
+    rentals[s[0]] = { brand: s[1], headline: s[2], body: s[3], color: s[4], link: '', image: '', plan: s[5], qty: s[6], until: addMonths(now, m).toISOString(), status: 'live', example: true };
+  });
+  var STORE = 'globeboard-v1', LSTORE = 'globeboard-lang';
+  try {
+    var saved = JSON.parse(localStorage.getItem(STORE) || '{}');
+    Object.keys(saved).forEach(function (k) { if (regions.has(k) && !rentals[k]) rentals[k] = saved[k]; });
+  } catch (e) { /* kayıt yoksa sorun değil */ }
+  function persist() {
+    try {
+      var out = {};
+      Object.keys(rentals).forEach(function (k) { if (!rentals[k].example) out[k] = rentals[k]; });
+      localStorage.setItem(STORE, JSON.stringify(out));
+    } catch (e) { toast(t('storeFull')); }
+  }
+  function isLive(k) { return rentals[k] && rentals[k].status === 'live'; }
+
+  /* ---------- Durum ---------- */
+  var PRESETS = ['#1D4ED8', '#15803D', '#9A3412', '#7E22CE', '#BE123C', '#0E7490'];
+  function freshDraft() { return { brand: '', headline: '', body: '', color: PRESETS[0], link: '', image: '', email: '', rules: false }; }
+  var state = { sel: null, hover: null, plan: 'month', qty: 1, draft: freshDraft(), err: '' };
+  function lum(hex) { var n = parseInt(hex.slice(1), 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }
+  function onColor(hex) { return lum(hex) > 0.6 ? '#101820' : '#FFFFFF'; }
+  function safeLink(u) { return /^https?:\/\//i.test(u || '') ? u : ''; }
+  function months(plan, qty) { return plan === 'year' ? 12 * qty : qty; }
+  /* Ödeme başına en düşük tutar (euro). Sabit işlem ücretleri küçük ödemeleri zarara çevirmesin diye. */
+  var MIN_ORDER = 3;
+  function minQty(r, plan) { return plan === 'year' ? 1 : Math.max(1, Math.ceil(MIN_ORDER / r.price - 1e-9)); }
+  function total(r, plan, qty) { return Math.round(unitLocal(r) * (plan === 'year' ? 10 : 1) * qty * 100) / 100; }
+  var toastTimer;
+  function toast(msg) {
+    var el = $('#toast'); el.textContent = msg; el.classList.add('on');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2800);
+  }
+
+  /* ---------- Küre ---------- */
+  var cv = $('#globe'), ctx = cv.getContext('2d');
+  var W = 0, H = 0, R = 0, dpr = 1;
+  var proj = d3.geoOrthographic().clipAngle(90).precision(0.6);
+  var path = d3.geoPath(proj, ctx);
+  var grat = d3.geoGraticule10();
+  var rot = [-30, -18], zoom = 1, auto = !reduced, dirty = true, anim = null, dragging = false;
+  var C = {};
+  function loadColors() {
+    var s = getComputedStyle(document.documentElement);
+    ['ocean', 'grid', 'land', 'landline', 'accent', 'ink', 'surface'].forEach(function (k) { C[k] = s.getPropertyValue('--' + k).trim(); });
+    dirty = true;
+  }
+  function resize() {
+    var r = cv.getBoundingClientRect();
+    dpr = window.devicePixelRatio || 1;
+    W = r.width; H = r.height; R = Math.min(W, H) / 2 * 0.94;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    dirty = true;
+  }
+  function visible(lon, lat) { return d3.geoDistance([lon, lat], [-rot[0], -rot[1]]) < Math.PI / 2 - 0.02; }
+
+  function visibleM(lon, lat, m) { return d3.geoDistance([lon, lat], [-rot[0], -rot[1]]) < Math.PI / 2 - m; }
+  function cityShown(c, selR) {
+    var k = 'y:' + c.id;
+    if (c.rank <= 1 || state.sel === k || state.hover === k || rentals[k]) return true;
+    if (selR && ((selR.type === 'country' && selR.id === c.cc) || (selR.type === 'city' && selR.cc === c.cc))) return true;
+    return c.rank === 2 ? zoom >= 1.5 : zoom >= 2.3;
+  }
+
+  function draw() {
+    if (!W) return;
+    proj.rotate(rot).scale(R * zoom).translate([W / 2, H / 2]);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.beginPath(); path({ type: 'Sphere' }); ctx.fillStyle = C.ocean; ctx.fill();
+    ctx.beginPath(); path(grat); ctx.strokeStyle = C.grid; ctx.lineWidth = 0.5; ctx.stroke();
+    var selR = state.sel ? regions.get(state.sel) : null;
+    features.forEach(function (f) {
+      var key = 'c:' + f.id;
+      ctx.beginPath(); path(f);
+      ctx.fillStyle = isLive(key) ? rentals[key].color : TONES[TONE_OF[f.id] || 0]; ctx.fill();
+      if (state.hover === key || state.sel === key) {
+        ctx.fillStyle = state.sel === key ? 'rgba(255,138,76,.32)' : 'rgba(255,255,255,.35)'; ctx.fill();
+      }
+      ctx.strokeStyle = C.landline; ctx.lineWidth = 0.9; ctx.lineJoin = 'round'; ctx.stroke();
+    });
+    if (selR && selR.type === 'country' && selR.feature) {
+      ctx.beginPath(); path(selR.feature); ctx.strokeStyle = C.accent; ctx.lineWidth = 2.4; ctx.stroke();
+    }
+
+    /* Etiket yerleşimi: önce şehirler (öncelik sırasıyla), sonra ülkeler. Çakışan etiket atlanır. */
+    var placed = [];
+    function room(x, y, w, h) {
+      for (var i = 0; i < placed.length; i++) { var q = placed[i]; if (x < q[0] + q[2] && x + w > q[0] && y < q[1] + q[3] && y + h > q[1]) return false; }
+      return true;
+    }
+    var pts = [];
+    CITIES.forEach(function (c) {
+      if (!cityShown(c, selR) || !visibleM(c.lon, c.lat, 0.02)) return;
+      var p = proj([c.lon, c.lat]); if (!p) return;
+      var key = 'y:' + c.id;
+      pts.push({ c: c, key: key, x: p[0], y: p[1], pri: (state.sel === key || state.hover === key) ? 0 : (rentals[key] ? 1 : c.rank + 1) });
+      placed.push([p[0] - 6, p[1] - 6, 12, 12]);
+    });
+    pts.sort(function (a, b) { return a.pri - b.pri; });
+    ctx.font = '500 11px "IBM Plex Mono", system-ui, sans-serif'; ctx.textBaseline = 'middle';
+    pts.forEach(function (o) {
+      var label = nameOf(regions.get(o.key)), w = ctx.measureText(label).width, h = 14, force = o.pri <= 1;
+      var xr = o.x + 9, xl = o.x - 9 - w, y0 = o.y - h / 2;
+      if (force || room(xr, y0, w, h)) { o.lx = xr; o.al = 'start'; placed.push([xr, y0, w, h]); }
+      else if (room(xl, y0, w, h)) { o.lx = xl; o.al = 'start'; placed.push([xl, y0, w, h]); }
+      o.label = label;
+    });
+    ctx.textAlign = 'start';
+    COUNTRY_ORDER.forEach(function (r) {
+      if (!visibleM(r.lon, r.lat, 0.3)) return;
+      var key = r.key, isSel = state.sel === key, isHov = state.hover === key;
+      var size = Math.sqrt(r.area) * R * zoom;
+      var fs = size > 160 ? 14 : size > 80 ? 12 : size > 40 ? 11 : 10;
+      ctx.font = '600 ' + fs + 'px "Instrument Sans", system-ui, sans-serif';
+      var label = nameOf(r), w = ctx.measureText(label).width;
+      if (!(isSel || isHov || w <= size * 1.25 || zoom >= 2.2)) return;
+      var p = proj([r.lon, r.lat]); if (!p) return;
+      var x = p[0] - w / 2, y = p[1] - fs / 2 - 1, h = fs + 2;
+      if (!(isSel || isHov) && !room(x, y, w, h)) return;
+      placed.push([x, y, w, h]);
+      ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.strokeText(label, x, p[1]);
+      ctx.fillStyle = isLive(key) ? onColor(rentals[key].color) : '#2A3F4E'; ctx.fillText(label, x, p[1]);
+    });
+    ctx.font = '500 11px "IBM Plex Mono", system-ui, sans-serif';
+    pts.forEach(function (o) {
+      var isSel = state.sel === o.key, isHov = state.hover === o.key;
+      var rad = isSel || isHov ? 6 : (o.c.rank >= 3 ? 3.2 : 4.2);
+      ctx.beginPath(); ctx.arc(o.x, o.y, rad + 2, 0, 6.2832); ctx.fillStyle = isSel ? C.accent : C.surface; ctx.fill();
+      ctx.beginPath(); ctx.arc(o.x, o.y, rad, 0, 6.2832); ctx.fillStyle = isLive(o.key) ? rentals[o.key].color : C.ink; ctx.fill();
+      if (o.lx != null) {
+        ctx.lineWidth = 3; ctx.strokeStyle = C.surface; ctx.strokeText(o.label, o.lx, o.y);
+        ctx.fillStyle = C.ink; ctx.fillText(o.label, o.lx, o.y);
+      }
+    });
+    ctx.beginPath(); path({ type: 'Sphere' }); ctx.strokeStyle = C.landline; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  function frame(ts) {
+    var dt = Math.min(50, ts - (frame.last || ts)); frame.last = ts;
+    if (anim) {
+      var k = Math.min(1, (ts - anim.t0) / anim.dur), e = 1 - Math.pow(1 - k, 3);
+      rot = [anim.from[0] + (anim.to[0] - anim.from[0]) * e, anim.from[1] + (anim.to[1] - anim.from[1]) * e];
+      zoom = anim.zf + (anim.zt - anim.zf) * e;
+      if (k >= 1) anim = null;
+      dirty = true;
+    } else if (auto && !dragging) { rot[0] += dt * 0.006; dirty = true; }
+    if (dirty) { dirty = false; draw(); }
+    heroFrame(dt);
+    requestAnimationFrame(frame);
+  }
+  function focusOn(lon, lat, z) {
+    var to = [-lon, Math.max(-65, Math.min(65, -lat))];
+    to[0] = rot[0] + (((to[0] - rot[0] + 540) % 360) - 180);
+    if (reduced) { rot = to; zoom = z; dirty = true; return; }
+    anim = { t0: performance.now(), dur: 850, from: rot.slice(), to: to, zf: zoom, zt: z };
+  }
+  function setAuto(on) {
+    auto = on; var b = $('#spin');
+    b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-label', on ? t('spinOff') : t('spinOn'));
+    b.style.opacity = on ? '1' : '.55';
+  }
+
+  function pick(x, y) {
+    var selR = state.sel ? regions.get(state.sel) : null, best = null, bd = 13;
+    for (var i = 0; i < CITIES.length; i++) {
+      var c = CITIES[i]; if (!cityShown(c, selR) || !visible(c.lon, c.lat)) continue;
+      var p = proj([c.lon, c.lat]); if (!p) continue;
+      var dd = Math.hypot(p[0] - x, p[1] - y);
+      if (dd < bd) { bd = dd; best = 'y:' + c.id; }
+    }
+    if (best) return best;
+    var ll = proj.invert([x, y]);
+    if (!ll || !isFinite(ll[0])) return null;
+    if (d3.geoDistance(ll, [-rot[0], -rot[1]]) > Math.PI / 2) return null;
+    for (var j = 0; j < features.length; j++) { if (d3.geoContains(features[j], ll)) return 'c:' + features[j].id; }
+    return null;
+  }
+  function local(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height)]; }
+
+  var down = null;
+  cv.addEventListener('pointerdown', function (e) {
+    down = { x: e.clientX, y: e.clientY, moved: false }; dragging = true; cv.classList.add('drag');
+    try { cv.setPointerCapture(e.pointerId); } catch (x) { /* yok say */ }
+    anim = null;
+  });
+  cv.addEventListener('pointermove', function (e) {
+    var p = local(e);
+    if (down) {
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) down.moved = true;
+      if (down.moved) {
+        var k = 57.3 / (R * zoom);
+        rot[0] += (e.clientX - (down.lx == null ? down.x : down.lx)) * k;
+        rot[1] = Math.max(-80, Math.min(80, rot[1] - (e.clientY - (down.ly == null ? down.y : down.ly)) * k));
+        dirty = true; setAuto(false); hideTip();
+      }
+      down.lx = e.clientX; down.ly = e.clientY;
+      return;
+    }
+    var h = pick(p[0], p[1]);
+    if (h !== state.hover) { state.hover = h; dirty = true; cv.classList.toggle('hit', !!h); }
+    if (h) showTip(h, p); else hideTip();
+  });
+  function endDrag(e) {
+    if (!down) return;
+    var wasClick = !down.moved, p = local(e);
+    down = null; dragging = false; cv.classList.remove('drag');
+    if (wasClick) { var h = pick(p[0], p[1]); if (h) selectRegion(h, true); }
+  }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', function () { down = null; dragging = false; cv.classList.remove('drag'); });
+  cv.addEventListener('pointerleave', function () { if (!down) { state.hover = null; dirty = true; hideTip(); } });
+
+  function showTip(key, p) {
+    var r = regions.get(key), rent = rentals[key], el = $('#tip'), info;
+    if (rent && rent.status === 'live') info = rent.brand + ': ' + rent.headline;
+    else if (rent) info = t('review');
+    else info = t('free') + ', ' + moneyC(unitLocal(r), curOf(r)) + ' ' + t('perMonth');
+    el.textContent = nameOf(r) + ' · ' + info;
+    el.style.left = p[0] + 'px'; el.style.top = p[1] + 'px'; el.hidden = false;
+  }
+  function hideTip() { $('#tip').hidden = true; }
+
+  $('#zin').addEventListener('click', function () { zoom = Math.min(8, zoom * 1.3); dirty = true; });
+  $('#zout').addEventListener('click', function () { zoom = Math.max(0.8, zoom / 1.3); dirty = true; });
+  $('#spin').addEventListener('click', function () { setAuto(!auto); });
+
+  /* ---------- Arayüz ---------- */
+  function adCard(a) {
+    var fg = onColor(a.color), link = safeLink(a.link);
+    return '<div class="ad" style="background:' + esc(a.color) + ';color:' + fg + '">' +
+      (a.image ? '<img src="' + esc(a.image) + '" alt="">' : '') +
+      '<div class="ad-body"><span class="ad-brand">' + esc(a.brand || t('phBrand')) + '</span>' +
+      '<span class="ad-head">' + esc(a.headline || t('phHead')) + '</span>' +
+      (a.body ? '<span class="ad-text">' + esc(a.body) + '</span>' : '') +
+      (link ? '<a class="ad-link" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">' + esc(t('more')) + '</a>' : '') +
+      '</div></div>';
+  }
+  function introHTML() {
+    return '<div><p class="eyebrow">' + esc(t('introK')) + '</p><h2>' + esc(t('introH')) + '</h2></div>' +
+      '<ol class="steps"><li><div><b>' + esc(t('s1h')) + '</b><span>' + esc(t('s1d')) + '</span></div></li>' +
+      '<li><div><b>' + esc(t('s2h')) + '</b><span>' + esc(t('s2d')) + '</span></div></li>' +
+      '<li><div><b>' + esc(t('s3h')) + '</b><span>' + esc(t('s3d')) + '</span></div></li></ol>' +
+      '<p class="fine">' + esc(t('count', { c: features.length, y: CITIES.length })) + '</p>';
+  }
+  function quoteHTML(r) {
+    var until = addMonths(new Date(), months(state.plan, state.qty));
+    return '<span class="total">' + esc(moneyC(total(r, state.plan, state.qty), curOf(r))) + '</span>' +
+      '<span class="until">' + esc(unit(state.qty, state.plan === 'year' ? 'year' : 'month')) + ' · ' + esc(t('ends')) + ' ' + esc(DF.format(until)) + '</span>' +
+      '<span class="until wide">' + esc(t('remindL')) + ': ' + esc(DF.format(remindDate(state.plan, until))) + '</span>';
+  }
+  function renderPanel() {
+    var el = $('#panel');
+    if (!state.sel) { el.innerHTML = introHTML(); return; }
+    var r = regions.get(state.sel), rent = rentals[state.sel], d = state.draft;
+    var parent = r.type === 'city' ? regions.get('c:' + r.cc) : null;
+    var pillCls = !rent ? 'free' : rent.status === 'live' ? 'taken' : 'review';
+    var pillTxt = !rent ? t('free') : rent.status === 'live' ? t('taken') : t('review');
+    var h = '<div class="reg-head"><div><p class="eyebrow">' + esc(r.type === 'city' ? t('city') : t('country')) + (parent ? ' · ' + esc(nameOf(parent)) : '') + '</p><h2>' + esc(nameOf(r)) + '</h2></div>' +
+      '<span class="pill ' + pillCls + '">' + esc(pillTxt) + '</span></div>';
+    var cl = CC_LANG[r.type === 'city' ? r.cc : r.id];
+    if (cl && cl !== lang) {
+      h += '<div class="suggest"><span>' + esc(t('suggest', { l: LANG_NAMES[cl] })) + '</span><button type="button" class="chip" data-action="lang" data-lang="' + cl + '">' + esc(t('suggestBtn', { l: LANG_NAMES[cl] })) + '</button></div>';
+    }
+    if (r.type === 'country') {
+      var cs = CITIES.filter(function (c) { return c.cc === r.id; });
+      if (cs.length) {
+        h += '<div class="sec"><h3>' + esc(t('cities')) + '</h3><div class="chips scroll">' + cs.map(function (c) {
+          var cr = regions.get('y:' + c.id);
+          return '<button type="button" class="chip" data-action="pick" data-key="y:' + c.id + '">' + esc(nameOf(cr)) + '<small>' + (rentals['y:' + c.id] ? esc(t('taken')) : esc(moneyC(unitLocal(cr), curOf(cr)))) + '</small></button>';
+        }).join('') + '</div></div>';
+      }
+    } else if (parent) {
+      h += '<div class="chips"><button type="button" class="chip" data-action="pick" data-key="' + parent.key + '">' + esc(t('toCountry', { n: nameOf(parent) })) + '</button></div>';
+    }
+    if (rent) {
+      h += '<div class="sec"><h3>' + esc(t('liveAd')) + '</h3>' + adCard(rent) + '</div>' +
+        '<dl class="meta"><div><dt>' + esc(t('advertiser')) + '</dt><dd>' + esc(rent.brand) + '</dd></div>' +
+        '<div><dt>' + esc(t('plan')) + '</dt><dd>' + esc(unit(rent.qty, rent.plan === 'year' ? 'year' : 'month')) + '</dd></div>' +
+        '<div><dt>' + esc(t('ends')) + '</dt><dd>' + esc(DF.format(new Date(rent.until))) + '</dd></div>' +
+        (rent.email ? '<div><dt>' + esc(t('remindL')) + '</dt><dd>' + esc(DF.format(remindDate(rent.plan, new Date(rent.until)))) + '</dd></div>' : '') + '</dl>';
+      if (rent.example) h += '<p class="fine">' + esc(t('example')) + '</p>';
+      else {
+        if (rent.status !== 'live') {
+          h += '<p class="rules">' + esc(t('rvNote')) + '</p><button type="button" class="cta ghost" data-action="approve">' + esc(t('approve')) + '</button>';
+        }
+        h += '<button type="button" class="cta ghost" data-action="release">' + esc(t('endIt')) + '</button>';
+      }
+      el.innerHTML = h; return;
+    }
+    h += '<div class="sec"><h3>' + esc(t('period')) + '</h3><div class="plans" role="group" aria-label="' + esc(t('period')) + '">' +
+      '<button type="button" class="plan" data-action="plan" data-plan="month" aria-pressed="' + (state.plan === 'month') + '"><span class="plan-name">' + esc(t('monthly')) + '</span><span class="plan-price">' + esc(moneyC(unitLocal(r), curOf(r))) + '</span><span class="plan-sub">' + esc(t('perMonth')) + '</span></button>' +
+      '<button type="button" class="plan" data-action="plan" data-plan="year" aria-pressed="' + (state.plan === 'year') + '"><span class="plan-name">' + esc(t('yearly')) + '</span><span class="plan-price">' + esc(moneyC(Math.round(unitLocal(r) * 10 * 100) / 100, curOf(r))) + '</span><span class="plan-sub">' + esc(t('perYear')) + '</span></button></div>' +
+      '<div class="stepper"><span>' + esc(t('duration')) + '</span><button type="button" data-action="dec" aria-label="−">−</button><output>' + esc(unit(state.qty, state.plan === 'year' ? 'year' : 'month')) + '</output><button type="button" data-action="inc" aria-label="+">+</button></div>' +
+      (state.plan === 'month' && minQty(r, 'month') > 1 ? '<p class="fine">' + esc(t('minNote', { m: moneyC(toLocal(MIN_ORDER, curOf(r)), curOf(r)), n: unit(minQty(r, 'month'), 'month') })) + '</p>' : '') +
+      '<p class="fine">' + esc(t('curNote', { c: curName(curOf(r)) })) + '</p></div>';
+    h += '<div class="sec"><h3>' + esc(t('yourAd')) + '</h3><div class="fields">' +
+      '<div class="field"><label for="f-brand">' + esc(t('brand')) + '</label><input id="f-brand" type="text" maxlength="28" value="' + esc(d.brand) + '"></div>' +
+      '<div class="field"><label for="f-headline">' + esc(t('headline')) + '</label><input id="f-headline" type="text" maxlength="40" value="' + esc(d.headline) + '"></div>' +
+      '<div class="field"><label for="f-body">' + esc(t('text')) + '</label><textarea id="f-body" maxlength="90">' + esc(d.body) + '</textarea></div>' +
+      '<div class="field"><label for="f-color">' + esc(t('color')) + '</label><div class="colors"><input id="f-color" type="color" value="' + esc(d.color) + '">' +
+      PRESETS.map(function (c) { return '<button type="button" class="preset" data-action="preset" data-color="' + c + '" style="background:' + c + '" aria-label="' + c + '"></button>'; }).join('') + '</div></div>' +
+      '<div class="field"><label for="f-link">' + esc(t('link')) + '</label><input id="f-link" type="url" placeholder="https://" value="' + esc(d.link) + '"></div>' +
+      '<div class="field"><label for="f-image">' + esc(t('image')) + '</label><input id="f-image" type="file" accept="image/*"></div>' +
+      '<div class="field"><label for="f-email">' + esc(t('emailL')) + '</label><input id="f-email" type="email" autocomplete="email" value="' + esc(d.email) + '"></div>' +
+      '</div></div>';
+    h += '<div class="sec"><h3>' + esc(t('preview')) + '</h3><div id="preview">' + adCard(d) + '</div></div>' +
+      '<p class="rules">' + esc(t('rulesT')) + '</p>' +
+      '<label class="check" for="f-rules"><input id="f-rules" type="checkbox"' + (d.rules ? ' checked' : '') + '><span>' + esc(t('rulesOk')) + '</span></label>' +
+      '<div class="quote" id="quote">' + quoteHTML(r) + '</div>' +
+      '<p class="err" id="err" role="alert">' + esc(state.err) + '</p>' +
+      '<button type="button" class="cta" data-action="rent">' + esc(t('rentBtn')) + '</button>' +
+      '<p class="fine">' + esc(t('proto')) + '</p>';
+    el.innerHTML = h;
+  }
+  function renderList() {
+    var keys = Object.keys(rentals);
+    $('#rows').innerHTML = keys.map(function (k) {
+      var r = regions.get(k), a = rentals[k];
+      return '<button type="button" class="row" data-action="pick" data-key="' + k + '"><i class="dot" style="background:' + esc(a.color) + '"></i><span style="min-width:0"><b>' + esc(nameOf(r)) + '</b><small>' + esc(a.brand) + ' · ' + esc(r.type === 'city' ? t('city') : t('country')) + ' · ' + esc(a.status === 'live' ? DF.format(new Date(a.until)) : t('review')) + '</small></span></button>';
+    }).join('') || '<p class="fine">' + esc(t('noRent')) + '</p>';
+  }
+  function selectRegion(key, doFocus) {
+    var r = regions.get(key); if (!r) return;
+    state.sel = key; state.plan = 'month'; state.qty = minQty(r, 'month'); state.draft = freshDraft(); state.err = '';
+    setAuto(false); renderPanel(); dirty = true;
+    if (doFocus) focusOn(r.lon, r.lat, r.zoom);
+    if (window.innerWidth < 900) { $('#panel').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); }
+  }
+  function setErr(msg) { state.err = msg; var e = $('#err'); if (e) e.textContent = msg; }
+
+  var panel = $('#panel');
+  function updatePreview() { var pv = $('#preview'); if (pv) pv.innerHTML = adCard(state.draft); }
+  panel.addEventListener('input', function (e) {
+    if (e.target.id === 'f-rules') { state.draft.rules = e.target.checked; return; }
+    var map = { 'f-brand': 'brand', 'f-headline': 'headline', 'f-body': 'body', 'f-color': 'color', 'f-link': 'link', 'f-email': 'email' };
+    var k = map[e.target.id]; if (!k) return;
+    state.draft[k] = e.target.value; updatePreview();
+  });
+  panel.addEventListener('change', function (e) {
+    if (e.target.id === 'f-rules') { state.draft.rules = e.target.checked; return; }
+    if (e.target.id !== 'f-image') return;
+    var f = e.target.files && e.target.files[0]; if (!f) return;
+    var fr = new FileReader();
+    fr.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var s = Math.min(1, 480 / img.width), c = document.createElement('canvas');
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        state.draft.image = c.toDataURL('image/jpeg', 0.8); updatePreview();
+      };
+      img.onerror = function () { setErr(t('eImg')); };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(f);
+  });
+  panel.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-action]'); if (!b) return;
+    var a = b.dataset.action, r = state.sel ? regions.get(state.sel) : null;
+    if (a === 'pick') { selectRegion(b.dataset.key, true); return; }
+    if (a === 'lang') { setLang(b.dataset.lang, true); return; }
+    if (!r) return;
+    if (a === 'plan') { state.plan = b.dataset.plan; state.qty = minQty(r, state.plan); renderPanel(); }
+    else if (a === 'inc') { state.qty = Math.min(state.plan === 'year' ? 3 : 12, state.qty + 1); renderPanel(); }
+    else if (a === 'dec') { state.qty = Math.max(minQty(r, state.plan), state.qty - 1); renderPanel(); }
+    else if (a === 'preset') { state.draft.color = b.dataset.color; renderPanel(); }
+    else if (a === 'release') { delete rentals[state.sel]; persist(); renderPanel(); renderList(); dirty = true; toast(t('tEnd', { r: nameOf(r) })); }
+    else if (a === 'approve') { rentals[state.sel].status = 'live'; persist(); renderPanel(); renderList(); dirty = true; toast(t('tApprove', { r: nameOf(r) })); }
+    else if (a === 'rent') {
+      var d = state.draft;
+      if (!d.brand.trim() || !d.headline.trim()) { setErr(t('eReq')); return; }
+      if (d.link && !safeLink(d.link)) { setErr(t('eLink')); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim())) { setErr(t('eMail')); return; }
+      if (!d.rules) { setErr(t('eRules')); return; }
+      rentals[state.sel] = { brand: d.brand.trim(), headline: d.headline.trim(), body: d.body.trim(), color: d.color, link: d.link.trim(), image: d.image, email: d.email.trim(), plan: state.plan, qty: state.qty, until: addMonths(new Date(), months(state.plan, state.qty)).toISOString(), status: 'review', example: false };
+      persist(); renderPanel(); renderList(); dirty = true;
+      toast(t('tReview', { r: nameOf(r) }));
+    }
+  });
+  $('#rows').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-action="pick"]'); if (b) selectRegion(b.dataset.key, true);
+  });
+
+  /* arama */
+  var lookup = new Map();
+  function buildSearch() {
+    lookup = new Map(); var opts = [];
+    regions.forEach(function (r) {
+      var n = nameOf(r);
+      lookup.set(n.toLocaleLowerCase(lang), r.key); lookup.set(r.en.toLocaleLowerCase(lang), r.key);
+      opts.push('<option value="' + esc(n) + '">');
+    });
+    $('#places').innerHTML = opts.join('');
+  }
+  function doSearch() {
+    var v = $('#search').value.trim().toLocaleLowerCase(lang);
+    var k = lookup.get(v);
+    if (k) selectRegion(k, true);
+  }
+  $('#search').addEventListener('change', doSearch);
+  $('#search').addEventListener('keydown', function (e) { if (e.key === 'Enter') doSearch(); });
+
+  /* e-posta kopyala */
+  document.querySelectorAll('.mailrow button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var a = btn.parentNode.querySelector('a');
+      function fallback() {
+        var rg = document.createRange(); rg.selectNodeContents(a);
+        var sl = window.getSelection(); sl.removeAllRanges(); sl.addRange(rg);
+      }
+      try {
+        navigator.clipboard.writeText(a.textContent).then(function () { toast(t('copied')); }, fallback);
+      } catch (err) { fallback(); }
+    });
+  });
+
+  /* dil */
+  function applyStatic() {
+    document.querySelectorAll('[data-i18n]').forEach(function (n) { n.textContent = t(n.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-ph]').forEach(function (n) { n.placeholder = t(n.getAttribute('data-i18n-ph')); });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function (n) { n.setAttribute('aria-label', t(n.getAttribute('data-i18n-aria'))); });
+  }
+  function setLang(l, remember) {
+    if (!I18N[l]) l = 'en';
+    lang = l;
+    document.documentElement.lang = l;
+    $('#landing').dir = $('#app').dir = l === 'ar' ? 'rtl' : 'ltr';
+    NF = new Intl.NumberFormat(l, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+    NF2 = new Intl.NumberFormat(l, { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    DF = new Intl.DateTimeFormat(l, { day: 'numeric', month: 'short', year: 'numeric' });
+    try { DN = new Intl.DisplayNames([l], { type: 'region' }); } catch (e) { DN = null; }
+    $('#lang').value = l; $('#lang0').value = l;
+    if (remember) { try { localStorage.setItem(LSTORE, l); } catch (e) { /* kaydedilemedi */ } }
+    applyStatic(); setAuto(auto); buildSearch(); renderPanel(); renderList(); renderLanding(); dirty = true;
+    var m = $('#stage-msg'); if (!worldOk) { m.hidden = false; m.textContent = t('mapFail'); }
+  }
+  function detectLang() {
+    try { var s = localStorage.getItem(LSTORE); if (s && I18N[s]) return s; } catch (e) { /* yok say */ }
+    var list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'en'];
+    for (var i = 0; i < list.length; i++) { var p = String(list[i]).toLowerCase().split('-')[0]; if (I18N[p]) return p; }
+    return 'en';
+  }
+  ['#lang', '#lang0'].forEach(function (sel) {
+    $(sel).innerHTML = LANGS.map(function (l) { return '<option value="' + l[0] + '">' + esc(l[1]) + '</option>'; }).join('');
+    $(sel).addEventListener('change', function (e) { setLang(e.target.value, true); });
+  });
+
+  /* açılış sayfası */
+  var TIER_EX = [['USA', 'DEU', 'JPN'], ['GRC', 'POL', 'CHL'], ['CHN', 'BRA', 'TUR'], ['IND', 'EGY', 'VNM'], ['AFG', 'ETH', 'HTI']];
+  function cname(id) {
+    var a = A2[id];
+    if (a && DN) { try { return DN.of(a); } catch (e) { /* kodu göster */ } }
+    return id;
+  }
+  function renderLanding() {
+    $('#how').innerHTML = [1, 2, 3].map(function (i) {
+      return '<li><div><b>' + esc(t('s' + i + 'h')) + '</b><span>' + esc(t('s' + i + 'd')) + '</span></div></li>';
+    }).join('');
+    $('#plantbl').innerHTML = TIER_EX.map(function (ids, i) {
+      var p = TIER_PRICE[i + 1];
+      return '<div class="pcard"><span class="tn">' + (i + 1) + '</span><div class="pc-names">' + esc(ids.map(cname).join(', ')) + '</div>' +
+        '<div class="pc-row"><span>' + esc(t('monthly')) + '</span><b>' + esc(money(p)) + '</b></div>' +
+        '<div class="pc-row"><span>' + esc(t('yearly')) + '</span><b>' + esc(money(p * 10)) + '</b></div>' +
+        '<span class="badge">' + esc(t('freeTwo')) + '</span></div>';
+    }).join('');
+    $('#exgrid').innerHTML = Object.keys(rentals).filter(function (k) { return rentals[k].example && regions.has(k); }).map(function (k) {
+      return '<div class="ex"><p class="eyebrow">' + esc(nameOf(regions.get(k))) + '</p>' + adCard(rentals[k]) + '</div>';
+    }).join('');
+    $('#heroCount').textContent = t('count', { c: features.length, y: CITIES.length });
+    $('#minall').textContent = t('minAll', { m: money(MIN_ORDER) });
+    $('#clauses').innerHTML = [1, 2, 3, 4, 5].map(function (i) {
+      return '<div class="clause"><h3>' + esc(t('c' + i + 'h')) + '</h3><p>' + esc(t('c' + i + 'd')) + '</p></div>';
+    }).join('');
+  }
+  function showApp() { $('#landing').hidden = true; $('#app').hidden = false; window.scrollTo(0, 0); resize(); dirty = true; }
+  function showLanding() { $('#app').hidden = true; $('#landing').hidden = false; window.scrollTo(0, 0); hresize(); }
+  $('#go').addEventListener('click', function () {
+    if (!$('#a1').checked || !$('#a2').checked) { $('#aerr').textContent = t('eAccept'); return; }
+    $('#aerr').textContent = ''; showApp();
+  });
+  $('#toLanding').addEventListener('click', showLanding);
+  function toPlans() { $('#plans').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); }
+  $('#heroCta').addEventListener('click', toPlans);
+  $('#tbCta').addEventListener('click', toPlans);
+
+  /* Açılış küresi: kendiliğinden döner, kiralanmış örnek reklamları nokta olarak gösterir */
+  var hcv = $('#heroGlobe'), hctx = hcv.getContext('2d'), hW = 0, hdpr = 1, hrot = [30, -16], hdirty = true;
+  var hproj = d3.geoOrthographic().clipAngle(90).precision(0.8), hpath = d3.geoPath(hproj, hctx), hgrat = d3.geoGraticule10();
+  function hresize() {
+    var r = hcv.getBoundingClientRect(); if (!r.width) return;
+    hdpr = window.devicePixelRatio || 1; hW = r.width;
+    hcv.width = Math.round(hW * hdpr); hcv.height = Math.round(hW * hdpr); hdirty = true;
+  }
+  function hdraw() {
+    if (!hW) return;
+    hproj.rotate(hrot).scale(hW / 2 * 0.94).translate([hW / 2, hW / 2]);
+    hctx.setTransform(hdpr, 0, 0, hdpr, 0, 0); hctx.clearRect(0, 0, hW, hW);
+    hctx.beginPath(); hpath({ type: 'Sphere' }); hctx.fillStyle = C.ocean || '#B9D3E4'; hctx.fill();
+    hctx.beginPath(); hpath(hgrat); hctx.strokeStyle = C.grid || 'rgba(18,33,44,.12)'; hctx.lineWidth = 0.5; hctx.stroke();
+    features.forEach(function (f) {
+      var key = 'c:' + f.id;
+      hctx.beginPath(); hpath(f);
+      hctx.fillStyle = isLive(key) ? rentals[key].color : TONES[TONE_OF[f.id] || 0]; hctx.fill();
+      hctx.strokeStyle = C.landline || '#6B879A'; hctx.lineWidth = 0.7; hctx.lineJoin = 'round'; hctx.stroke();
+    });
+    hctx.font = '600 12px "Instrument Sans", system-ui, sans-serif'; hctx.textBaseline = 'middle'; hctx.textAlign = 'start';
+    Object.keys(rentals).forEach(function (k) {
+      var r = regions.get(k); if (!r || !isLive(k)) return;
+      if (d3.geoDistance([r.lon, r.lat], [-hrot[0], -hrot[1]]) > Math.PI / 2 - 0.12) return;
+      var p = hproj([r.lon, r.lat]); if (!p) return;
+      hctx.beginPath(); hctx.arc(p[0], p[1], 7, 0, 6.2832); hctx.fillStyle = '#FFFFFF'; hctx.fill();
+      hctx.beginPath(); hctx.arc(p[0], p[1], 4.6, 0, 6.2832); hctx.fillStyle = rentals[k].color; hctx.fill();
+      hctx.lineWidth = 3; hctx.strokeStyle = 'rgba(255,255,255,.9)'; hctx.strokeText(rentals[k].brand, p[0] + 11, p[1]);
+      hctx.fillStyle = '#12212C'; hctx.fillText(rentals[k].brand, p[0] + 11, p[1]);
+    });
+    hctx.beginPath(); hpath({ type: 'Sphere' }); hctx.strokeStyle = C.landline || '#6B879A'; hctx.lineWidth = 1.2; hctx.stroke();
+  }
+  function heroFrame(dt) {
+    if ($('#landing').hidden || !hW) return;
+    if (!reduced) { hrot[0] += dt * 0.012; hdraw(); } else if (hdirty) { hdirty = false; hdraw(); }
+  }
+
+  /* başlangıç */
+  loadColors(); resize(); hresize();
+  if (window.ResizeObserver) { new ResizeObserver(resize).observe(cv); new ResizeObserver(hresize).observe(hcv); } else { window.addEventListener('resize', resize); window.addEventListener('resize', hresize); }
+  if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', loadColors);
+  new MutationObserver(loadColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  setLang(detectLang(), false);
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
+display: block; width: 100%; max-width: 500px; aspect-ratio: 1 / 1; margin-inline: auto; }
 .steps.cols li { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--surface); }
 .exgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px; }
 .ex { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
