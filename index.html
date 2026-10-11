@@ -19,7 +19,7 @@
   --ocean: #B9D3E4;
   --grid: rgba(18, 33, 44, .12);
   --land: #F4F7F5;
-  --landline: #8AA4B5;
+  --landline: #6B879A;
   --accent: #C2410C;
   --accent-ink: #FFFFFF;
   --avail: #0F766E;
@@ -78,6 +78,7 @@ header { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: end; justi
 .pill.taken { color: var(--accent); }
 .pill.review { color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips.scroll { max-height: 220px; overflow-y: auto; padding-block: 2px; }
 .chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 11px; font-size: 13px; cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
 .chip small { font-family: var(--font-mono); color: var(--muted); margin-inline-start: 6px; }
@@ -960,8 +961,8 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
 
   /* Para birimleri: her ülke kendi parasıyla öder. Fiyat basamakları euro ile tanımlı, kurlar örnektir (11 Ekim 2026). */
   var CUR_GROUPS = {
-    EUR: 'AUT BEL BGR HRV CYP EST FIN FRA DEU GRC IRL ITA LVA LTU LUX MLT NLD PRT SVK SVN ESP MNE',
-    USD: 'USA ECU SLV PRI PAN TLS ZWE', GBP: 'GBR', JPY: 'JPN', KRW: 'KOR', CNY: 'CHN', INR: 'IND', IDR: 'IDN', AUD: 'AUS', NZD: 'NZL', CAD: 'CAN', CHF: 'CHE',
+    EUR: 'AUT BEL BGR HRV CYP EST FIN FRA DEU GRC IRL ITA LVA LTU LUX MLT NLD PRT SVK SVN ESP MNE AND MCO SMR XKX',
+    USD: 'USA ECU SLV PRI PAN TLS ZWE', GBP: 'GBR', JPY: 'JPN', KRW: 'KOR', CNY: 'CHN', INR: 'IND', IDR: 'IDN', AUD: 'AUS', NZD: 'NZL', CAD: 'CAN', CHF: 'CHE LIE',
     SEK: 'SWE', NOK: 'NOR', DKK: 'DNK GRL', ISK: 'ISL', PLN: 'POL', CZK: 'CZE', HUF: 'HUN', RON: 'ROU', TRY: 'TUR', RUB: 'RUS', UAH: 'UKR', BYN: 'BLR',
     KZT: 'KAZ', UZS: 'UZB', KGS: 'KGZ', TJS: 'TJK', TMT: 'TKM', AZN: 'AZE', AMD: 'ARM', GEL: 'GEO', MDL: 'MDA', ALL: 'ALB', MKD: 'MKD', RSD: 'SRB', BAM: 'BIH',
     ILS: 'ISR PSE', JOD: 'JOR', LBP: 'LBN', SYP: 'SYR', IQD: 'IRQ', IRR: 'IRN', SAR: 'SAU', AED: 'ARE', QAR: 'QAT', KWD: 'KWT', BHD: 'BHR', OMR: 'OMN', YER: 'YEM',
@@ -1014,7 +1015,18 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
     ['losangeles', 'Los Angeles', 'Los Angeles', 'Los Angeles', 'USA', -118.24, 34.05, 1500], ['chicago', 'Chicago', 'Chicago', 'Chicago', 'USA', -87.6, 41.88, 1000], ['toronto', 'Toronto', 'Toronto', 'Toronto', 'CAN', -79.38, 43.65, 900],
     ['mexico', 'Mexico City', 'Mexico City', 'Ciudad de México', 'MEX', -99.13, 19.43, 800], ['saopaulo', 'São Paulo', 'São Paulo', 'São Paulo', 'BRA', -46.63, -23.55, 1100], ['buenosaires', 'Buenos Aires', 'Buenos Aires', 'Buenos Aires', 'ARG', -58.38, -34.6, 700],
     ['bogota', 'Bogota', 'Bogotá', 'Bogotá', 'COL', -74.07, 4.71, 500], ['santiago', 'Santiago', 'Santiago', 'Santiago', 'CHL', -70.65, -33.45, 500], ['lima', 'Lima', 'Lima', 'Lima', 'PER', -77.04, -12.05, 450]
-  ].map(function (c) { return { id: c[0], tr: c[1], en: c[2], loc: c[3], cc: c[4], lon: c[5], lat: c[6], price: c[7] }; });
+  ].map(function (c) { return { id: c[0], tr: c[1], en: c[2], loc: c[3], cc: c[4], lon: c[5], lat: c[6], rank: 1 }; });
+
+  /* Ek şehirler: en, tr, yerel yazım, ülke, boylam, enlem, öncelik (2 = yakınlaşınca, 3 = daha çok yakınlaşınca veya ülke seçilince görünür). Boş alanlar İngilizce yazımı kullanır. */
+  function slug(s) { return s.replace(/ı/g, 'i').replace(/İ/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''); }
+  (function () {
+    var seen = {}; CITIES.forEach(function (c) { seen[c.id] = 1; });
+    var EXTRA = [["Vienna","Viyana","Wien","AUT",16.37,48.21,2],["Brussels","Brüksel","","BEL",4.35,50.85,2],["Sofia","Sofya","","BGR",23.32,42.7,2],["Zagreb","","","HRV",15.98,45.81,2],["Nicosia","Lefkoşa","","CYP",33.38,35.17,2],["Tallinn","","","EST",24.75,59.44,2],["Helsinki","","","FIN",24.94,60.17,2],["Athens","Atina","Αθήνα","GRC",23.73,37.98,2],["Dublin","","","IRL",-6.26,53.35,2],["Riga","","","LVA",24.11,56.95,2],["Vilnius","","","LTU",25.28,54.69,2],["Luxembourg","Lüksemburg","","LUX",6.13,49.61,2],["Valletta","Valetta","","MLT",14.51,35.9,2],["Lisbon","Lizbon","Lisboa","PRT",-9.14,38.72,2],["Bratislava","","","SVK",17.11,48.15,2],["Ljubljana","","","SVN",14.51,46.06,2],["Podgorica","","","MNE",19.26,42.44,2],["Washington, D.C.","Vaşington","","USA",-77.04,38.91,2],["Quito","","","ECU",-78.47,-0.18,2],["San Salvador","","","SLV",-89.19,13.69,2],["Panama City","Panama","","PAN",-79.52,8.98,2],["Dili","","","TLS",125.57,-8.56,2],["Harare","","","ZWE",31.05,-17.83,2],["Canberra","","","AUS",149.13,-35.28,2],["Wellington","","","NZL",174.78,-41.29,2],["Ottawa","","","CAN",-75.7,45.42,2],["Bern","","Bern","CHE",7.45,46.95,2],["Stockholm","Stokholm","","SWE",18.07,59.33,2],["Oslo","","","NOR",10.75,59.91,2],["Copenhagen","Kopenhag","","DNK",12.57,55.68,2],["Nuuk","","","GRL",-51.72,64.18,2],["Reykjavik","","","ISL",-21.94,64.15,2],["Warsaw","Varşova","Warszawa","POL",21.01,52.23,2],["Prague","Prag","Praha","CZE",14.42,50.09,2],["Budapest","Budapeşte","","HUN",19.04,47.5,2],["Bucharest","Bükreş","București","ROU",26.1,44.43,2],["Kyiv","Kiev","Київ","UKR",30.52,50.45,2],["Minsk","","Мінск","BLR",27.57,53.9,2],["Astana","","Астана","KAZ",71.43,51.17,2],["Tashkent","Taşkent","","UZB",69.24,41.3,2],["Bishkek","Bişkek","","KGZ",74.59,42.87,2],["Dushanbe","Duşanbe","","TJK",68.77,38.56,2],["Ashgabat","Aşkabat","","TKM",58.38,37.95,2],["Baku","Bakü","","AZE",49.87,40.41,2],["Yerevan","Erivan","","ARM",44.51,40.18,2],["Tbilisi","Tiflis","","GEO",44.79,41.72,2],["Chișinău","Kişinev","","MDA",28.86,47.01,2],["Tirana","","","ALB",19.82,41.33,2],["Skopje","Üsküp","","MKD",21.43,42.0,2],["Belgrade","Belgrad","","SRB",20.46,44.79,2],["Sarajevo","Saraybosna","","BIH",18.41,43.86,2],["Tel Aviv","","","ISR",34.78,32.08,2],["Ramallah","Remallah","","PSE",35.2,31.9,2],["Amman","Amman","عمّان","JOR",35.93,31.95,2],["Beirut","Beyrut","بيروت","LBN",35.5,33.89,2],["Damascus","Şam","دمشق","SYR",36.29,33.51,2],["Baghdad","Bağdat","بغداد","IRQ",44.37,33.31,2],["Tehran","Tahran","تهران","IRN",51.39,35.69,2],["Abu Dhabi","Ebu Dabi","أبوظبي","ARE",54.37,24.45,2],["Doha","","الدوحة","QAT",51.53,25.29,2],["Kuwait City","Kuveyt","الكويت","KWT",47.98,29.38,2],["Manama","","المنامة","BHR",50.58,26.23,2],["Muscat","Maskat","مسقط","OMN",58.41,23.59,2],["Sanaa","Sana","صنعاء","YEM",44.21,15.37,2],["Jeddah","Cidde","جدة","SAU",39.17,21.54,2],["Tripoli","Trablus","طرابلس","LBY",13.19,32.89,2],["Tunis","Tunus","تونس","TUN",10.18,36.81,2],["Algiers","Cezayir","الجزائر","DZA",3.06,36.75,2],["Rabat","","الرباط","MAR",-6.84,34.02,2],["Casablanca","Kazablanka","الدار البيضاء","MAR",-7.59,33.57,2],["Laayoune","El Ayun","","ESH",-13.2,27.15,2],["Alexandria","İskenderiye","الإسكندرية","EGY",29.92,31.2,2],["Khartoum","Hartum","الخرطوم","SDN",32.56,15.5,2],["Juba","","","SSD",31.58,4.85,2],["Addis Ababa","","","ETH",38.75,9.03,2],["Kampala","","","UGA",32.58,0.35,2],["Dodoma","","","TZA",35.74,-6.16,2],["Dar es Salaam","Darüsselam","","TZA",39.28,-6.79,2],["Kigali","","","RWA",30.06,-1.95,2],["Gitega","","","BDI",29.93,-3.43,2],["Abuja","","","NGA",7.49,9.08,2],["Accra","","","GHA",-0.19,5.6,2],["Pretoria","","","ZAF",28.19,-25.75,2],["Cape Town","","","ZAF",18.42,-33.92,2],["Durban","","","ZAF",31.02,-29.86,2],["Windhoek","","","NAM",17.08,-22.56,2],["Maseru","","","LSO",27.48,-29.31,2],["Mbabane","","","SWZ",31.14,-26.31,2],["Gaborone","","","BWA",25.91,-24.65,2],["Maputo","","","MOZ",32.57,-25.97,2],["Antananarivo","","","MDG",47.51,-18.88,2],["Lilongwe","","","MWI",33.79,-13.96,2],["Lusaka","","","ZMB",28.29,-15.39,2],["Luanda","","","AGO",13.23,-8.84,2],["Kinshasa","","","COD",15.31,-4.32,2],["Yaoundé","","","CMR",11.52,3.85,2],["Bangui","","","CAF",18.56,4.36,2],["Libreville","","","GAB",9.45,0.39,2],["Brazzaville","","","COG",15.28,-4.27,2],["N'Djamena","","","TCD",15.04,12.13,2],["Malabo","","","GNQ",8.78,3.75,2],["Porto-Novo","","","BEN",2.63,6.5,2],["Ouagadougou","","","BFA",-1.52,12.37,2],["Yamoussoukro","","","CIV",-5.28,6.82,2],["Abidjan","","","CIV",-4.02,5.36,2],["Bissau","","","GNB",-15.6,11.86,2],["Bamako","","","MLI",-8.0,12.64,2],["Niamey","","","NER",2.11,13.51,2],["Dakar","","","SEN",-17.47,14.69,2],["Lomé","","","TGO",1.22,6.13,2],["Conakry","","","GIN",-13.68,9.64,2],["Freetown","","","SLE",-13.23,8.48,2],["Monrovia","","","LBR",-10.8,6.3,2],["Banjul","","","GMB",-16.58,13.45,2],["Nouakchott","","","MRT",-15.98,18.09,2],["Mogadishu","Mogadişu","","SOM",45.34,2.05,2],["Djibouti","Cibuti","","DJI",43.15,11.59,2],["Asmara","","","ERI",38.93,15.32,2],["Brasília","","","BRA",-47.93,-15.79,2],["Rio de Janeiro","","","BRA",-43.17,-22.91,2],["Montevideo","","","URY",-56.19,-34.9,2],["Asunción","","","PRY",-57.58,-25.26,2],["La Paz","","","BOL",-68.15,-16.5,2],["Caracas","","","VEN",-66.9,10.48,2],["Georgetown","","","GUY",-58.16,6.8,2],["Paramaribo","","","SUR",-55.2,5.85,2],["Belmopan","","","BLZ",-88.77,17.25,2],["Guatemala City","Guatemala","","GTM",-90.51,14.63,2],["Tegucigalpa","","","HND",-87.2,14.07,2],["Managua","","","NIC",-86.25,12.13,2],["San José","","","CRI",-84.09,9.93,2],["Santo Domingo","","","DOM",-69.93,18.49,2],["Havana","Havana","La Habana","CUB",-82.37,23.11,2],["Port-au-Prince","Port-o-Prens","","HTI",-72.34,18.54,2],["Kingston","","","JAM",-76.79,18.0,2],["Port of Spain","","","TTO",-61.52,10.66,2],["Nassau","","","BHS",-77.35,25.04,2],["San Juan","","","PRI",-66.11,18.47,2],["Hanoi","","","VNM",105.85,21.03,2],["Ho Chi Minh City","Ho Şi Min","","VNM",106.63,10.82,2],["Kuala Lumpur","","","MYS",101.69,3.14,2],["Manila","","","PHL",120.98,14.6,2],["Phnom Penh","","","KHM",104.92,11.56,2],["Vientiane","","","LAO",102.6,17.97,2],["Naypyidaw","","","MMR",96.08,19.76,2],["Yangon","Yangon","","MMR",96.2,16.87,2],["Dhaka","Dakka","","BGD",90.41,23.81,2],["Islamabad","","","PAK",73.05,33.68,2],["Karachi","Karaçi","","PAK",67.0,24.86,2],["Lahore","Lahor","","PAK",74.34,31.55,2],["Colombo","Kolombo","","LKA",79.86,6.93,2],["Kathmandu","Katmandu","","NPL",85.32,27.72,2],["Thimphu","","","BTN",89.64,27.47,2],["Kabul","","","AFG",69.17,34.53,2],["Ulaanbaatar","Ulan Batur","","MNG",106.91,47.89,2],["Bandar Seri Begawan","","","BRN",114.94,4.89,2],["Port Moresby","","","PNG",147.18,-9.44,2],["Honiara","","","SLB",159.97,-9.43,2],["Port Vila","","","VUT",168.32,-17.73,2],["Suva","","","FJI",178.44,-18.14,2],["Taipei","Taypey","台北","TWN",121.57,25.03,2],["Pyongyang","","평양","PRK",125.75,39.02,2],["Malé","","","MDV",73.51,4.18,2],["Port Louis","","","MUS",57.5,-20.16,2],["Apia","","","WSM",-171.76,-13.83,2],["Nukuʻalofa","","","TON",-175.2,-21.14,2],["Bridgetown","","","BRB",-59.62,13.1,2],["Andorra la Vella","","","AND",1.52,42.51,2],["Monaco","","","MCO",7.42,43.74,2],["Vaduz","","","LIE",9.52,47.14,2],["San Marino","","","SMR",12.45,43.94,2],["Praia","","","CPV",-23.51,14.93,2],["Moroni","","","COM",43.26,-11.7,2],["São Tomé","","","STP",6.73,0.34,2],["Pristina","Priştine","","XKX",21.17,42.67,2],["Nouméa","","","NCL",166.46,-22.28,2],["Papeete","","","PYF",-149.57,-17.54,2],["Osaka","","","JPN",135.5,34.69,2],["Busan","","부산","KOR",129.08,35.18,2],["Shenzhen","","深圳","CHN",114.06,22.54,2],["Guangzhou","","广州","CHN",113.26,23.13,2],["Hong Kong","","香港","CHN",114.17,22.32,2],["Chengdu","","成都","CHN",104.07,30.57,2],["Kolkata","Kalküta","","IND",88.36,22.57,2],["Bengaluru","Bangalor","","IND",77.59,12.97,2],["Chennai","","","IND",80.27,13.08,2],["Barcelona","Barselona","","ESP",2.17,41.39,2],["Milan","Milano","","ITA",9.19,45.46,2],["Munich","Münih","München","DEU",11.58,48.14,2],["Hamburg","","","DEU",9.99,53.55,2],["Frankfurt","","","DEU",8.68,50.11,2],["Lyon","","","FRA",4.84,45.76,2],["Marseille","Marsilya","","FRA",5.37,43.3,2],["Manchester","","","GBR",-2.24,53.48,2],["Saint Petersburg","","","RUS",30.32,59.93,2],["Novosibirsk","","","RUS",82.93,55.03,2],["Vladivostok","","","RUS",131.89,43.12,2],["Perth","","","AUS",115.86,-31.95,2],["Melbourne","","","AUS",144.96,-37.81,2],["Brisbane","","","AUS",153.03,-27.47,2],["Auckland","","","NZL",174.76,-36.85,2],["Vancouver","","","CAN",-123.12,49.28,2],["Montreal","","","CAN",-73.57,45.5,2],["San Francisco","","","USA",-122.42,37.77,2],["Houston","","","USA",-95.37,29.76,2],["Miami","","","USA",-80.19,25.76,2],["Seattle","","","USA",-122.33,47.61,2],["Boston","","","USA",-71.06,42.36,2],["Dallas","","","USA",-96.8,32.78,2],["Atlanta","","","USA",-84.39,33.75,2],["Las Vegas","","","USA",-115.14,36.17,2],["Anchorage","","","USA",-149.9,61.22,2],["Honolulu","","","USA",-157.86,21.31,2],["Salvador","","","BRA",-38.5,-12.97,2],["Medellín","","","COL",-75.57,6.24,2],["Guadalajara","","","MEX",-103.35,20.67,2],["Monterrey","","","MEX",-100.32,25.69,2],["Adana","","","TUR",35.32,37.0,3],["Adıyaman","","","TUR",38.28,37.76,3],["Afyonkarahisar","","","TUR",30.54,38.76,3],["Ağrı","","","TUR",43.05,39.72,3],["Aksaray","","","TUR",34.03,38.37,3],["Amasya","","","TUR",35.83,40.65,3],["Antalya","","","TUR",30.71,36.9,3],["Ardahan","","","TUR",42.7,41.11,3],["Artvin","","","TUR",41.82,41.18,3],["Aydın","","","TUR",27.84,37.85,3],["Balıkesir","","","TUR",27.89,39.65,3],["Bartın","","","TUR",32.34,41.64,3],["Batman","","","TUR",41.13,37.89,3],["Bayburt","","","TUR",40.23,40.26,3],["Bilecik","","","TUR",29.98,40.15,3],["Bingöl","","","TUR",40.5,38.88,3],["Bitlis","","","TUR",42.11,38.4,3],["Bolu","","","TUR",31.61,40.74,3],["Burdur","","","TUR",30.29,37.72,3],["Bursa","","","TUR",29.06,40.19,3],["Çanakkale","","","TUR",26.41,40.15,3],["Çankırı","","","TUR",33.62,40.6,3],["Çorum","","","TUR",34.95,40.55,3],["Denizli","","","TUR",29.09,37.78,3],["Diyarbakır","","","TUR",40.22,37.91,3],["Düzce","","","TUR",31.16,40.84,3],["Edirne","","","TUR",26.56,41.68,3],["Elazığ","","","TUR",39.22,38.67,3],["Erzincan","","","TUR",39.49,39.75,3],["Erzurum","","","TUR",41.27,39.9,3],["Eskişehir","","","TUR",30.52,39.78,3],["Gaziantep","","","TUR",37.38,37.07,3],["Giresun","","","TUR",38.39,40.91,3],["Gümüşhane","","","TUR",39.48,40.46,3],["Hakkâri","","","TUR",43.74,37.58,3],["Hatay","","","TUR",36.16,36.2,3],["Iğdır","","","TUR",44.04,39.92,3],["Isparta","","","TUR",30.55,37.76,3],["Kahramanmaraş","","","TUR",36.94,37.58,3],["Karabük","","","TUR",32.62,41.2,3],["Karaman","","","TUR",33.22,37.18,3],["Kars","","","TUR",43.09,40.6,3],["Kastamonu","","","TUR",33.78,41.38,3],["Kayseri","","","TUR",35.49,38.72,3],["Kilis","","","TUR",37.12,36.72,3],["Kırıkkale","","","TUR",33.51,39.85,3],["Kırklareli","","","TUR",27.22,41.74,3],["Kırşehir","","","TUR",34.16,39.15,3],["Kocaeli","","","TUR",29.92,40.77,3],["Konya","","","TUR",32.49,37.87,3],["Kütahya","","","TUR",29.98,39.42,3],["Malatya","","","TUR",38.31,38.35,3],["Manisa","","","TUR",27.43,38.61,3],["Mardin","","","TUR",40.74,37.31,3],["Mersin","","","TUR",34.64,36.81,3],["Muğla","","","TUR",28.36,37.22,3],["Muş","","","TUR",41.49,38.74,3],["Nevşehir","","","TUR",34.72,38.62,3],["Niğde","","","TUR",34.68,37.97,3],["Ordu","","","TUR",37.88,40.98,3],["Osmaniye","","","TUR",36.25,37.07,3],["Rize","","","TUR",40.52,41.02,3],["Sakarya","","","TUR",30.4,40.78,3],["Samsun","","","TUR",36.33,41.29,3],["Şanlıurfa","","","TUR",38.79,37.16,3],["Siirt","","","TUR",41.94,37.93,3],["Sinop","","","TUR",35.15,42.03,3],["Sivas","","","TUR",37.02,39.75,3],["Şırnak","","","TUR",42.46,37.52,3],["Tekirdağ","","","TUR",27.51,40.98,3],["Tokat","","","TUR",36.55,40.31,3],["Trabzon","","","TUR",39.72,41.0,3],["Tunceli","","","TUR",39.55,39.11,3],["Uşak","","","TUR",29.41,38.68,3],["Van","","","TUR",43.38,38.5,3],["Yalova","","","TUR",29.27,40.65,3],["Yozgat","","","TUR",34.81,39.82,3],["Zonguldak","","","TUR",31.8,41.46,3]];
+    EXTRA.forEach(function (e) {
+      var id = e[3].toLowerCase() + '_' + slug(e[0]); if (seen[id]) return; seen[id] = 1;
+      CITIES.push({ id: id, tr: e[1] || e[0], en: e[0], loc: e[2] || e[0], cc: e[3], lon: e[4], lat: e[5], rank: e[6] });
+    });
+  })();
 
   var features = [], regions = new Map(), worldOk = false;
   try {
@@ -1022,21 +1034,60 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
   } catch (err) { console.error(err); }
 
   features.forEach(function (f) {
-    var c = d3.geoCentroid(f), a = d3.geoArea(f);
-    regions.set('c:' + f.id, { key: 'c:' + f.id, type: 'country', id: f.id, en: f.properties.name, price: countryPrice(f.id), lon: c[0], lat: c[1], zoom: a > 0.3 ? 1.15 : a > 0.05 ? 1.8 : 2.6, feature: f });
+    /* Etiket ve odak noktası: en büyük parçanın merkezi (Alaska veya Guyana gibi uzak parçalar kaydırmasın) */
+    var best = null, ba = -1;
+    f.geometry.coordinates.forEach(function (poly) { var pa = d3.geoArea({ type: 'Polygon', coordinates: poly }); if (pa > ba) { ba = pa; best = poly; } });
+    var c = best ? d3.geoCentroid({ type: 'Polygon', coordinates: best }) : d3.geoCentroid(f), a = d3.geoArea(f);
+    regions.set('c:' + f.id, { key: 'c:' + f.id, type: 'country', id: f.id, en: f.properties.name || String(f.id), price: countryPrice(f.id), lon: c[0], lat: c[1], area: a, zoom: a > 0.3 ? 1.15 : a > 0.05 ? 1.8 : 2.6, feature: f });
   });
   CITIES.forEach(function (c) {
     regions.set('y:' + c.id, { key: 'y:' + c.id, type: 'city', id: c.id, cc: c.cc, en: c.en, price: cityPrice(c.cc), lon: c.lon, lat: c.lat, zoom: 2.6, city: c });
   });
+
+  /* Komşu ülkeler farklı tonda boyanır, böylece sınırlar net seçilir. Komşuluk, ortak sınır noktalarından bulunur. */
+  var TONES = ['#EEF3EF', '#E2EBDC', '#F2EAD6', '#E7E4F1', '#F0E2E1'];
+  var TONE_OF = {};
+  (function () {
+    var i, j;
+    try {
+      var cell = {}, nb = {};
+      features.forEach(function (f) {
+        nb[f.id] = {};
+        f.geometry.coordinates.forEach(function (poly) {
+          poly.forEach(function (ring) {
+            for (var q = 0; q < ring.length; q++) {
+              var k = Math.round(ring[q][0] * 2) + ',' + Math.round(ring[q][1] * 2);
+              (cell[k] || (cell[k] = {}))[f.id] = 1;
+            }
+          });
+        });
+      });
+      Object.keys(cell).forEach(function (k) {
+        var ids = Object.keys(cell[k]);
+        for (i = 0; i < ids.length; i++) for (j = 0; j < ids.length; j++) if (i !== j) nb[ids[i]][ids[j]] = 1;
+      });
+      var order = features.map(function (f) { return f.id; }).sort(function (a, b) { return Object.keys(nb[b]).length - Object.keys(nb[a]).length; });
+      order.forEach(function (id) {
+        var use = TONES.map(function () { return 0; });
+        Object.keys(nb[id]).forEach(function (n) { if (n in TONE_OF) use[TONE_OF[n]]++; });
+        var bi = 0; for (i = 1; i < TONES.length; i++) if (use[i] < use[bi]) bi = i;
+        TONE_OF[id] = bi;
+      });
+    } catch (err) { console.error(err); }
+    features.forEach(function (f, n) { if (!(f.id in TONE_OF)) TONE_OF[f.id] = n % TONES.length; });
+  })();
+  var COUNTRY_ORDER = features.map(function (f) { return regions.get('c:' + f.id); }).sort(function (a, b) { return b.area - a.area; });
   function nameOf(r) {
     if (r.type === 'city') {
       var c = r.city;
       if (lang === 'tr') return c.tr;
       return CC_LANG[c.cc] === lang ? c.loc : c.en;
     }
-    var a2 = A2[r.id];
-    if (a2 && DN) { try { var n = DN.of(a2); if (n && n !== a2) return n; } catch (e) { /* İngilizce ada dön */ } }
-    return r.en;
+    if (r._nl === lang) return r._n;
+    var a2 = A2[r.id], out = r.en;
+    if (a2 && DN) { try { var n = DN.of(a2); if (n && n !== a2) out = n; } catch (e) { /* İngilizce ada dön */ } }
+    r._nl = lang; r._n = out;
+    return out;
   }
 
   /* ---------- Kiralamalar ---------- */
@@ -1108,6 +1159,14 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
   }
   function visible(lon, lat) { return d3.geoDistance([lon, lat], [-rot[0], -rot[1]]) < Math.PI / 2 - 0.02; }
 
+  function visibleM(lon, lat, m) { return d3.geoDistance([lon, lat], [-rot[0], -rot[1]]) < Math.PI / 2 - m; }
+  function cityShown(c, selR) {
+    var k = 'y:' + c.id;
+    if (c.rank <= 1 || state.sel === k || state.hover === k || rentals[k]) return true;
+    if (selR && ((selR.type === 'country' && selR.id === c.cc) || (selR.type === 'city' && selR.cc === c.cc))) return true;
+    return c.rank === 2 ? zoom >= 1.5 : zoom >= 2.3;
+  }
+
   function draw() {
     if (!W) return;
     proj.rotate(rot).scale(R * zoom).translate([W / 2, H / 2]);
@@ -1119,27 +1178,64 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
     features.forEach(function (f) {
       var key = 'c:' + f.id;
       ctx.beginPath(); path(f);
-      ctx.fillStyle = isLive(key) ? rentals[key].color : C.land; ctx.fill();
+      ctx.fillStyle = isLive(key) ? rentals[key].color : TONES[TONE_OF[f.id] || 0]; ctx.fill();
       if (state.hover === key || state.sel === key) {
-        ctx.fillStyle = state.sel === key ? 'rgba(255,138,76,.32)' : 'rgba(255,255,255,.22)'; ctx.fill();
+        ctx.fillStyle = state.sel === key ? 'rgba(255,138,76,.32)' : 'rgba(255,255,255,.35)'; ctx.fill();
       }
-      ctx.strokeStyle = C.landline; ctx.lineWidth = 0.5; ctx.stroke();
+      ctx.strokeStyle = C.landline; ctx.lineWidth = 0.9; ctx.lineJoin = 'round'; ctx.stroke();
     });
     if (selR && selR.type === 'country' && selR.feature) {
-      ctx.beginPath(); path(selR.feature); ctx.strokeStyle = C.accent; ctx.lineWidth = 2.2; ctx.stroke();
+      ctx.beginPath(); path(selR.feature); ctx.strokeStyle = C.accent; ctx.lineWidth = 2.4; ctx.stroke();
     }
+
+    /* Etiket yerleşimi: önce şehirler (öncelik sırasıyla), sonra ülkeler. Çakışan etiket atlanır. */
+    var placed = [];
+    function room(x, y, w, h) {
+      for (var i = 0; i < placed.length; i++) { var q = placed[i]; if (x < q[0] + q[2] && x + w > q[0] && y < q[1] + q[3] && y + h > q[1]) return false; }
+      return true;
+    }
+    var pts = [];
     CITIES.forEach(function (c) {
-      if (!visible(c.lon, c.lat)) return;
+      if (!cityShown(c, selR) || !visibleM(c.lon, c.lat, 0.02)) return;
       var p = proj([c.lon, c.lat]); if (!p) return;
-      var key = 'y:' + c.id, isSel = state.sel === key, isHov = state.hover === key;
-      var rad = isSel || isHov ? 6 : 4.2;
-      ctx.beginPath(); ctx.arc(p[0], p[1], rad + 2, 0, 6.2832); ctx.fillStyle = isSel ? C.accent : C.surface; ctx.fill();
-      ctx.beginPath(); ctx.arc(p[0], p[1], rad, 0, 6.2832); ctx.fillStyle = isLive(key) ? rentals[key].color : C.ink; ctx.fill();
-      if (isSel || isHov || zoom > 2) {
-        var label = nameOf(regions.get(key));
-        ctx.font = '500 11px "IBM Plex Mono", system-ui, sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'start';
-        ctx.lineWidth = 3; ctx.strokeStyle = C.surface; ctx.strokeText(label, p[0] + 10, p[1]);
-        ctx.fillStyle = C.ink; ctx.fillText(label, p[0] + 10, p[1]);
+      var key = 'y:' + c.id;
+      pts.push({ c: c, key: key, x: p[0], y: p[1], pri: (state.sel === key || state.hover === key) ? 0 : (rentals[key] ? 1 : c.rank + 1) });
+      placed.push([p[0] - 6, p[1] - 6, 12, 12]);
+    });
+    pts.sort(function (a, b) { return a.pri - b.pri; });
+    ctx.font = '500 11px "IBM Plex Mono", system-ui, sans-serif'; ctx.textBaseline = 'middle';
+    pts.forEach(function (o) {
+      var label = nameOf(regions.get(o.key)), w = ctx.measureText(label).width, h = 14, force = o.pri <= 1;
+      var xr = o.x + 9, xl = o.x - 9 - w, y0 = o.y - h / 2;
+      if (force || room(xr, y0, w, h)) { o.lx = xr; o.al = 'start'; placed.push([xr, y0, w, h]); }
+      else if (room(xl, y0, w, h)) { o.lx = xl; o.al = 'start'; placed.push([xl, y0, w, h]); }
+      o.label = label;
+    });
+    ctx.textAlign = 'start';
+    COUNTRY_ORDER.forEach(function (r) {
+      if (!visibleM(r.lon, r.lat, 0.3)) return;
+      var key = r.key, isSel = state.sel === key, isHov = state.hover === key;
+      var size = Math.sqrt(r.area) * R * zoom;
+      var fs = size > 160 ? 14 : size > 80 ? 12 : size > 40 ? 11 : 10;
+      ctx.font = '600 ' + fs + 'px "Instrument Sans", system-ui, sans-serif';
+      var label = nameOf(r), w = ctx.measureText(label).width;
+      if (!(isSel || isHov || w <= size * 1.25 || zoom >= 2.2)) return;
+      var p = proj([r.lon, r.lat]); if (!p) return;
+      var x = p[0] - w / 2, y = p[1] - fs / 2 - 1, h = fs + 2;
+      if (!(isSel || isHov) && !room(x, y, w, h)) return;
+      placed.push([x, y, w, h]);
+      ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.strokeText(label, x, p[1]);
+      ctx.fillStyle = isLive(key) ? onColor(rentals[key].color) : '#2A3F4E'; ctx.fillText(label, x, p[1]);
+    });
+    ctx.font = '500 11px "IBM Plex Mono", system-ui, sans-serif';
+    pts.forEach(function (o) {
+      var isSel = state.sel === o.key, isHov = state.hover === o.key;
+      var rad = isSel || isHov ? 6 : (o.c.rank >= 3 ? 3.2 : 4.2);
+      ctx.beginPath(); ctx.arc(o.x, o.y, rad + 2, 0, 6.2832); ctx.fillStyle = isSel ? C.accent : C.surface; ctx.fill();
+      ctx.beginPath(); ctx.arc(o.x, o.y, rad, 0, 6.2832); ctx.fillStyle = isLive(o.key) ? rentals[o.key].color : C.ink; ctx.fill();
+      if (o.lx != null) {
+        ctx.lineWidth = 3; ctx.strokeStyle = C.surface; ctx.strokeText(o.label, o.lx, o.y);
+        ctx.fillStyle = C.ink; ctx.fillText(o.label, o.lx, o.y);
       }
     });
     ctx.beginPath(); path({ type: 'Sphere' }); ctx.strokeStyle = C.landline; ctx.lineWidth = 1; ctx.stroke();
@@ -1171,11 +1267,14 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
   }
 
   function pick(x, y) {
+    var selR = state.sel ? regions.get(state.sel) : null, best = null, bd = 13;
     for (var i = 0; i < CITIES.length; i++) {
-      var c = CITIES[i]; if (!visible(c.lon, c.lat)) continue;
-      var p = proj([c.lon, c.lat]);
-      if (p && Math.hypot(p[0] - x, p[1] - y) < 11) return 'y:' + c.id;
+      var c = CITIES[i]; if (!cityShown(c, selR) || !visible(c.lon, c.lat)) continue;
+      var p = proj([c.lon, c.lat]); if (!p) continue;
+      var dd = Math.hypot(p[0] - x, p[1] - y);
+      if (dd < bd) { bd = dd; best = 'y:' + c.id; }
     }
+    if (best) return best;
     var ll = proj.invert([x, y]);
     if (!ll || !isFinite(ll[0])) return null;
     if (d3.geoDistance(ll, [-rot[0], -rot[1]]) > Math.PI / 2) return null;
@@ -1227,7 +1326,7 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
   }
   function hideTip() { $('#tip').hidden = true; }
 
-  $('#zin').addEventListener('click', function () { zoom = Math.min(4, zoom * 1.3); dirty = true; });
+  $('#zin').addEventListener('click', function () { zoom = Math.min(8, zoom * 1.3); dirty = true; });
   $('#zout').addEventListener('click', function () { zoom = Math.max(0.8, zoom / 1.3); dirty = true; });
   $('#spin').addEventListener('click', function () { setAuto(!auto); });
 
@@ -1271,7 +1370,7 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
     if (r.type === 'country') {
       var cs = CITIES.filter(function (c) { return c.cc === r.id; });
       if (cs.length) {
-        h += '<div class="sec"><h3>' + esc(t('cities')) + '</h3><div class="chips">' + cs.map(function (c) {
+        h += '<div class="sec"><h3>' + esc(t('cities')) + '</h3><div class="chips scroll">' + cs.map(function (c) {
           var cr = regions.get('y:' + c.id);
           return '<button type="button" class="chip" data-action="pick" data-key="y:' + c.id + '">' + esc(nameOf(cr)) + '<small>' + (rentals['y:' + c.id] ? esc(t('taken')) : esc(moneyC(unitLocal(cr), curOf(cr)))) + '</small></button>';
         }).join('') + '</div></div>';
