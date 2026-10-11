@@ -170,33 +170,81 @@ h1.brand { font-size: clamp(44px, 9vw, 68px); letter-spacing: -.035em; gap: 14px
 .clause h3 { color: var(--ink); }
 .accept { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; gap: 14px; }
 .until.wide { flex-basis: 100%; }
+
+/* Açılış sayfası: sabit üst çubuk, küreli giriş, fiyat kartları */
+html { color-scheme: light; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; }
+[hidden] { display: none !important; }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; margin-inline: -16px; padding-inline: 16px; background: rgba(255, 255, 255, .92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.topbar-in { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 14px; height: 60px; }
+.tb-brand { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 800; font-size: 21px; letter-spacing: -.02em; margin-inline-end: auto; }
+.tb-brand .mark { width: 26px; height: 26px; }
+.tb-nav { display: none; gap: 24px; margin-inline-end: 8px; }
+.tb-nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; }
+.tb-nav a:hover { color: var(--ink); }
+@media (min-width: 760px) { .tb-nav { display: flex; } }
+.topbar .langsel label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.topbar .langsel select { height: 38px; width: auto; min-width: 104px; }
+.tb-cta { height: 38px; padding-inline: 14px; font-size: 14px; white-space: nowrap; }
+@media (max-width: 520px) { .tb-cta { display: none; } }
+.land { padding-top: 12px; }
+.land section { scroll-margin-top: 76px; }
+.land section.hero2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: center; padding-block: 12px 8px; }
+@media (min-width: 860px) { .land section.hero2 { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 40px; } }
+.hero-copy { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; min-width: 0; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.hero-globe { background: radial-gradient(circle at 50% 50%, #E6F0F7 0, #FFFFFF 66%); border-radius: 50%; }
+.hero-globe canvas { display: block; width: 100%; max-width: 500px; aspect-ratio: 1 / 1; margin-inline: auto; }
+.steps.cols li { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--surface); }
+.exgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px; }
+.ex { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ex .eyebrow { margin: 0; }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 12px; }
+.pcard { border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--bg); min-width: 0; }
+.pcard .tn { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.pcard .pc-names { font-weight: 600; min-height: 2.8em; overflow-wrap: anywhere; }
+.pcard .pc-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.pcard .pc-row span { color: var(--muted); font-size: 13px; }
+.pcard .pc-row b { font-family: var(--font-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.badge { align-self: flex-start; font-size: 12px; font-weight: 600; color: var(--avail); border: 1px solid var(--avail); border-radius: 999px; padding: 2px 10px; }
+.accept { border: 2px solid var(--ink); background: var(--bg); }
 </style>
 
 </head>
 <body>
-<div class="wrap land" id="landing">
-  <div class="land-top">
-    <div class="langsel">
-      <label for="lang0" data-i18n="langL"></label>
-      <select id="lang0"></select>
+<div id="landing">
+<div class="topbar"><div class="topbar-in">
+  <span class="tb-brand"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.4"/><ellipse cx="16" cy="16" rx="6" ry="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 16h25" stroke="currentColor" stroke-width="2"/><circle cx="22.5" cy="9.5" r="3.4" fill="var(--accent)"/></svg>Globeboard</span>
+  <nav class="tb-nav" aria-label="Globeboard"><a href="#howsec" data-i18n="howH"></a><a href="#plans" data-i18n="plansH"></a><a href="#terms" data-i18n="navTerms"></a></nav>
+  <div class="langsel"><label for="lang0" data-i18n="langL"></label><select id="lang0"></select></div>
+  <button type="button" class="cta tb-cta" id="tbCta" data-i18n="heroCta"></button>
+</div></div>
+<div class="wrap land">
+  <section class="hero hero2">
+    <div class="hero-copy">
+      <h1 class="brand">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.4"/><ellipse cx="16" cy="16" rx="6" ry="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 16h25" stroke="currentColor" stroke-width="2"/><circle cx="22.5" cy="9.5" r="3.4" fill="var(--accent)"/></svg>
+        Globeboard
+      </h1>
+      <p class="hero-lead" data-i18n="lead"></p>
+      <div class="hero-actions"><button type="button" class="cta" id="heroCta" data-i18n="heroCta"></button><span class="fine" id="heroCount"></span></div>
     </div>
-  </div>
-  <section class="hero">
-    <h1 class="brand">
-      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.4"/><ellipse cx="16" cy="16" rx="6" ry="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 16h25" stroke="currentColor" stroke-width="2"/><circle cx="22.5" cy="9.5" r="3.4" fill="var(--accent)"/></svg>
-      Globeboard
-    </h1>
-    <p class="hero-lead" data-i18n="lead"></p>
-    <button type="button" class="cta" id="heroCta" data-i18n="heroCta"></button>
+    <div class="hero-globe"><canvas id="heroGlobe" role="img" aria-label="Globeboard"></canvas></div>
   </section>
-  <section aria-labelledby="howh">
+  <section id="howsec" aria-labelledby="howh">
     <h3 id="howh" data-i18n="howH"></h3>
     <ol class="steps cols" id="how"></ol>
+  </section>
+  <section id="exsec" aria-labelledby="exh">
+    <h3 id="exh" data-i18n="exH"></h3>
+    <p data-i18n="exD"></p>
+    <div class="exgrid" id="exgrid"></div>
   </section>
   <section id="plans" aria-labelledby="plansh">
     <h3 id="plansh" data-i18n="plansH"></h3>
     <p data-i18n="plansD"></p>
-    <div class="tblwrap"><div class="tbl" id="plantbl"></div></div>
+    <div class="pgrid" id="plantbl"></div>
     <p class="fine" data-i18n="cityNote"></p>
     <p class="fine" id="minall"></p>
     <p class="fine" data-i18n="curAll"></p>
@@ -217,6 +265,7 @@ h1.brand { font-size: clamp(44px, 9vw, 68px); letter-spacing: -.035em; gap: 14px
     <p class="mailrow"><span data-i18n="contact"></span>: <a id="mail2" href="mailto:globeboard.official@gmail.com">globeboard.official@gmail.com</a> <button type="button" class="chip" data-i18n="copy"></button></p>
     <p data-i18n="noData"></p>
   </footer>
+</div>
 </div>
 
 <div class="wrap" id="app" hidden>
@@ -879,6 +928,21 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
     ko: { curNote: '이 국가의 통화인 {c}(으)로 결제합니다. 여기의 환율은 예시입니다.', curAll: '표는 유로로 표시됩니다. 결제 시 각 국가는 자국 통화로 결제합니다.' }
   };
   Object.keys(I18N4).forEach(function (l) { Object.keys(I18N4[l]).forEach(function (k) { I18N[l][k] = I18N4[l][k]; }); });
+  var I18N5 = {
+    tr: { exH: 'Örnek reklamlar', exD: 'Reklamın küre üzerinde böyle görünür. Aşağıdakiler kurgusal örneklerdir.', freeTwo: '2 ay ücretsiz' },
+    en: { exH: 'Example ads', exD: 'This is how your ad appears on the globe. The ones below are fictional examples.', freeTwo: '2 months free' },
+    de: { exH: 'Beispielanzeigen', exD: 'So erscheint deine Anzeige auf dem Globus. Die folgenden sind fiktive Beispiele.', freeTwo: '2 Monate gratis' },
+    fr: { exH: 'Exemples d\'annonces', exD: 'Voici comment ton annonce apparaît sur le globe. Les exemples ci-dessous sont fictifs.', freeTwo: '2 mois offerts' },
+    es: { exH: 'Anuncios de ejemplo', exD: 'Así se ve tu anuncio en el globo. Los siguientes son ejemplos ficticios.', freeTwo: '2 meses gratis' },
+    pt: { exH: 'Anúncios de exemplo', exD: 'É assim que seu anúncio aparece no globo. Os abaixo são exemplos fictícios.', freeTwo: '2 meses grátis' },
+    it: { exH: 'Annunci di esempio', exD: 'Ecco come appare il tuo annuncio sul globo. Quelli sotto sono esempi di fantasia.', freeTwo: '2 mesi gratis' },
+    ru: { exH: 'Примеры рекламы', exD: 'Так ваша реклама выглядит на глобусе. Ниже вымышленные примеры.', freeTwo: '2 месяца бесплатно' },
+    ar: { exH: 'أمثلة على الإعلانات', exD: 'هكذا يظهر إعلانك على الكرة الأرضية. الأمثلة أدناه خيالية.', freeTwo: 'شهران مجانًا' },
+    zh: { exH: '广告示例', exD: '你的广告会这样显示在地球上。以下为虚构示例。', freeTwo: '免费赠送 2 个月' },
+    ja: { exH: '広告の例', exD: '広告は地球儀上でこのように表示されます。以下は架空の例です。', freeTwo: '2か月分無料' },
+    ko: { exH: '광고 예시', exD: '광고는 지구본에서 이렇게 보입니다. 아래는 가상의 예시입니다.', freeTwo: '2개월 무료' }
+  };
+  Object.keys(I18N5).forEach(function (l) { Object.keys(I18N5[l]).forEach(function (k) { I18N[l][k] = I18N5[l][k]; }); });
 
   var lang = 'en';
   var NF, NF2, DF, DN;
@@ -1251,6 +1315,7 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
       dirty = true;
     } else if (auto && !dragging) { rot[0] += dt * 0.006; dirty = true; }
     if (dirty) { dirty = false; draw(); }
+    heroFrame(dt);
     requestAnimationFrame(frame);
   }
   function focusOn(lon, lat, z) {
@@ -1562,28 +1627,73 @@ window.echarts = { registerMap: function (name, geo) { window.__WORLD = geo; } }
     $('#how').innerHTML = [1, 2, 3].map(function (i) {
       return '<li><div><b>' + esc(t('s' + i + 'h')) + '</b><span>' + esc(t('s' + i + 'd')) + '</span></div></li>';
     }).join('');
-    $('#plantbl').innerHTML = '<div class="tr th"><span></span><span>' + esc(t('colEx')) + '</span><span class="num">' + esc(t('monthly')) + '</span><span class="num">' + esc(t('yearly')) + '</span></div>' +
-      TIER_EX.map(function (ids, i) {
-        var p = TIER_PRICE[i + 1];
-        return '<div class="tr"><span class="tn">' + (i + 1) + '</span><span>' + esc(ids.map(cname).join(', ')) + '</span><span class="num">' + esc(money(p)) + '</span><span class="num">' + esc(money(p * 10)) + '</span></div>';
-      }).join('');
+    $('#plantbl').innerHTML = TIER_EX.map(function (ids, i) {
+      var p = TIER_PRICE[i + 1];
+      return '<div class="pcard"><span class="tn">' + (i + 1) + '</span><div class="pc-names">' + esc(ids.map(cname).join(', ')) + '</div>' +
+        '<div class="pc-row"><span>' + esc(t('monthly')) + '</span><b>' + esc(money(p)) + '</b></div>' +
+        '<div class="pc-row"><span>' + esc(t('yearly')) + '</span><b>' + esc(money(p * 10)) + '</b></div>' +
+        '<span class="badge">' + esc(t('freeTwo')) + '</span></div>';
+    }).join('');
+    $('#exgrid').innerHTML = Object.keys(rentals).filter(function (k) { return rentals[k].example && regions.has(k); }).map(function (k) {
+      return '<div class="ex"><p class="eyebrow">' + esc(nameOf(regions.get(k))) + '</p>' + adCard(rentals[k]) + '</div>';
+    }).join('');
+    $('#heroCount').textContent = t('count', { c: features.length, y: CITIES.length });
     $('#minall').textContent = t('minAll', { m: money(MIN_ORDER) });
     $('#clauses').innerHTML = [1, 2, 3, 4, 5].map(function (i) {
       return '<div class="clause"><h3>' + esc(t('c' + i + 'h')) + '</h3><p>' + esc(t('c' + i + 'd')) + '</p></div>';
     }).join('');
   }
   function showApp() { $('#landing').hidden = true; $('#app').hidden = false; window.scrollTo(0, 0); resize(); dirty = true; }
-  function showLanding() { $('#app').hidden = true; $('#landing').hidden = false; window.scrollTo(0, 0); }
+  function showLanding() { $('#app').hidden = true; $('#landing').hidden = false; window.scrollTo(0, 0); hresize(); }
   $('#go').addEventListener('click', function () {
     if (!$('#a1').checked || !$('#a2').checked) { $('#aerr').textContent = t('eAccept'); return; }
     $('#aerr').textContent = ''; showApp();
   });
   $('#toLanding').addEventListener('click', showLanding);
-  $('#heroCta').addEventListener('click', function () { $('#plans').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); });
+  function toPlans() { $('#plans').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); }
+  $('#heroCta').addEventListener('click', toPlans);
+  $('#tbCta').addEventListener('click', toPlans);
+
+  /* Açılış küresi: kendiliğinden döner, kiralanmış örnek reklamları nokta olarak gösterir */
+  var hcv = $('#heroGlobe'), hctx = hcv.getContext('2d'), hW = 0, hdpr = 1, hrot = [30, -16], hdirty = true;
+  var hproj = d3.geoOrthographic().clipAngle(90).precision(0.8), hpath = d3.geoPath(hproj, hctx), hgrat = d3.geoGraticule10();
+  function hresize() {
+    var r = hcv.getBoundingClientRect(); if (!r.width) return;
+    hdpr = window.devicePixelRatio || 1; hW = r.width;
+    hcv.width = Math.round(hW * hdpr); hcv.height = Math.round(hW * hdpr); hdirty = true;
+  }
+  function hdraw() {
+    if (!hW) return;
+    hproj.rotate(hrot).scale(hW / 2 * 0.94).translate([hW / 2, hW / 2]);
+    hctx.setTransform(hdpr, 0, 0, hdpr, 0, 0); hctx.clearRect(0, 0, hW, hW);
+    hctx.beginPath(); hpath({ type: 'Sphere' }); hctx.fillStyle = C.ocean || '#B9D3E4'; hctx.fill();
+    hctx.beginPath(); hpath(hgrat); hctx.strokeStyle = C.grid || 'rgba(18,33,44,.12)'; hctx.lineWidth = 0.5; hctx.stroke();
+    features.forEach(function (f) {
+      var key = 'c:' + f.id;
+      hctx.beginPath(); hpath(f);
+      hctx.fillStyle = isLive(key) ? rentals[key].color : TONES[TONE_OF[f.id] || 0]; hctx.fill();
+      hctx.strokeStyle = C.landline || '#6B879A'; hctx.lineWidth = 0.7; hctx.lineJoin = 'round'; hctx.stroke();
+    });
+    hctx.font = '600 12px "Instrument Sans", system-ui, sans-serif'; hctx.textBaseline = 'middle'; hctx.textAlign = 'start';
+    Object.keys(rentals).forEach(function (k) {
+      var r = regions.get(k); if (!r || !isLive(k)) return;
+      if (d3.geoDistance([r.lon, r.lat], [-hrot[0], -hrot[1]]) > Math.PI / 2 - 0.12) return;
+      var p = hproj([r.lon, r.lat]); if (!p) return;
+      hctx.beginPath(); hctx.arc(p[0], p[1], 7, 0, 6.2832); hctx.fillStyle = '#FFFFFF'; hctx.fill();
+      hctx.beginPath(); hctx.arc(p[0], p[1], 4.6, 0, 6.2832); hctx.fillStyle = rentals[k].color; hctx.fill();
+      hctx.lineWidth = 3; hctx.strokeStyle = 'rgba(255,255,255,.9)'; hctx.strokeText(rentals[k].brand, p[0] + 11, p[1]);
+      hctx.fillStyle = '#12212C'; hctx.fillText(rentals[k].brand, p[0] + 11, p[1]);
+    });
+    hctx.beginPath(); hpath({ type: 'Sphere' }); hctx.strokeStyle = C.landline || '#6B879A'; hctx.lineWidth = 1.2; hctx.stroke();
+  }
+  function heroFrame(dt) {
+    if ($('#landing').hidden || !hW) return;
+    if (!reduced) { hrot[0] += dt * 0.012; hdraw(); } else if (hdirty) { hdirty = false; hdraw(); }
+  }
 
   /* başlangıç */
-  loadColors(); resize();
-  if (window.ResizeObserver) new ResizeObserver(resize).observe(cv); else window.addEventListener('resize', resize);
+  loadColors(); resize(); hresize();
+  if (window.ResizeObserver) { new ResizeObserver(resize).observe(cv); new ResizeObserver(hresize).observe(hcv); } else { window.addEventListener('resize', resize); window.addEventListener('resize', hresize); }
   if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', loadColors);
   new MutationObserver(loadColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   setLang(detectLang(), false);
